@@ -1,0 +1,249 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous">
+
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.js"
+      integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+      crossorigin="anonymous">
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js"
+      integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
+      crossorigin="anonymous">
+    </script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+      integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+      crossorigin="anonymous">
+    </script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.js'></script>
+    <script type="text/javascript" src="https://rawgithub.com/yesmeck/jquery-jsonview/master/dist/jquery.jsonview.js"></script>
+    <style>
+      .right-frame .full-frame{
+        position: relative;
+      }
+
+      .modal, .modal-backdrop {
+        position: absolute !important;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Trigger Search -->
+    <div class="container p-1">
+      <button value="explore" class="btn btn-primary" onclick="venues_explore();">Venues/Explore</button>
+      <button value="search" class="btn btn-primary" onclick="venues_search();">Venues/Search</button>
+      <button value="food" class="btn btn-outline-primary">Food</button>
+      <button value="travel" class="btn btn-outline-primary">Travel</button>
+      <button id="trigger_api" value="api_response" class="btn btn-outline-info">API Response</button>
+      <div class="form-check col-4 p-1">
+        <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
+        <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
+      </div>
+      <div class="col p-1">
+          <input class="form-control" type="text" id="manual_latlng" placeholder="Key in lat long, or the name of a city.">
+      </div>
+
+    </div>
+
+    {% if no_results %}
+
+    {% else %}
+    <!-- Search Result Display -->
+    <div class="d-md-flex h-md-100 p-2 full-frame">
+      <!-- First Half -->
+      <div id="list-frame" class="col-md-3 p-0 bg-indigo h-md-100">
+          <div class="d-md-flex align-items-center h-100 ml-5 text-center">
+              <ul class="list-group">
+                  {% for feature in result_geojson["features"] %}
+                  <li class="list-group-item justify-content-between align-items-center">
+                    <a id="modal_trigger_{{ feature['properties']['venueid'] }}">{{ feature["properties"]["venuename"] }}</a>
+                    {% if feature["properties"]["rating"] > 0 %}
+                    <span class="badge badge-primary badge-pill">{{ feature["properties"]["rating"] }}</span>
+                    {% endif %}
+                  </li>
+                  {% endfor %}
+              </ul>
+            </div>
+          </div>
+      <!-- Second Half -->
+      <div id="map-frame" class="col-md-9 p-0 bg-white h-md-100 right-frame">
+        <div class="d-md-flex h-md-100 p-5 justify-content-center">
+          <div id="map" style='width:100%; height:400px'></div>
+          <!-- Venue Details Modal -->
+          <div class="modal fade" id="venue_detail" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  ...
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-primary">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Response Modal -->
+      <div class="modal fade" id="api_response" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">URL</h5>
+            </div>
+            <div class="modal-body" style="overflow-y:unset;">
+              <pre class="pl-2" id="api_get_url" >{{ api_get_url }}</pre>
+            </div>
+            <div class="modal-header">
+              <h5>Response</h5>
+            </div>
+            <div class="modal-body">
+              <pre id="api_response_text"></pre>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" id="toggle-details" class="btn btn-primary">Collapse Details</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    {% endif %}
+  </body>
+  <script>
+    // Bias the autocomplete object to the user's geographical location,
+    // as supplied by the browser's 'navigator.geolocation' object.
+    function geolocate() {
+     if ($("#useCurrLocation").is(':checked')){
+       $("#manual_latlng").attr('disabled','disabled');
+       if (navigator.geolocation) {
+         navigator.geolocation.getCurrentPosition(function(position) {
+           geolocation = {
+             lat: position.coords.latitude,
+             lng: position.coords.longitude
+           };
+           currLocation = position.coords.latitude.toString() + "," + position.coords.longitude.toString();
+           document.getElementById("manual_latlng").value = currLocation;
+         });
+       }
+     }else{
+       $("#manual_latlng").attr('disabled',false);
+       document.getElementById("manual_latlng").value = "";
+     }
+    }
+    function venues_search(){
+     var curr_location = document.getElementById("manual_latlng").value;
+     window.location.href = "?cl=" + curr_location + "&search_type=search";
+    }
+    function venues_explore(){
+     var curr_location = document.getElementById("manual_latlng").value;
+     window.location.href = "?cl=" + curr_location + "&search_type=explore";
+    }
+    mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
+    var result_geojson = {{ result_geojson|safe }};
+    var fsq_result = {{ fsq_result|tojson|safe }};
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/light-v10',
+      center: [{{ map_center }}],
+      zoom: 3
+    });
+
+    map.on('load', function(){
+      map.addSource('fsq_result', {
+        type:'geojson',
+        data: result_geojson
+      });
+      map.addLayer({
+        id: 'markers',
+        type: 'circle',
+        source: 'fsq_result',
+        paint:{
+          "circle-radius": [
+            "interpolate",["linear"],["zoom"],
+            14,5,
+            16,4
+            //'base': 2.5,
+            //'stops': [[12, 2], [22, 180]]
+          ],
+          "circle-color": 'rgb(252,141,98)'
+        }
+      });
+
+      map.flyTo({center: [{{ map_center }}], zoom: map.getZoom() - 1});
+    });
+
+    var bounds = new mapboxgl.LngLatBounds();
+    result_geojson.features.forEach(function(feature){
+      bounds.extend(feature.geometry.coordinates);
+    });
+
+    map.fitBounds(bounds);
+
+    $(document).ready(function(){
+
+      {% for feature in result_geojson["features"] %}
+      $("body").on("click","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
+
+          $("#venue_detail").modal("show");
+
+          //appending modal background inside the blue div
+          $('.modal-backdrop').appendTo('#map-frame');
+
+          //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
+          $('body').removeClass("modal-open")
+          $('body').css("padding-right","");
+      });
+
+      $("body").on("mouseover","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
+          map.setFilter('markers',["==",['string',['get','venueid']],"{{ feature['properties']['venueid'] }}"]);
+      });
+
+      $("body").on("mouseout","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
+          map.setFilter('markers');
+      });
+
+      {% endfor %}
+
+      $("body").on("click","#trigger_api",function(){
+
+           $("#api_response").modal("show");
+
+           //appending modal background inside the blue div
+           $('.modal-backdrop').appendTo('.full-frame');
+
+           //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
+           $('body').removeClass("modal-open")
+           $('body').css("padding-right","");
+       });
+
+    });
+
+    $("#api_response_text").JSONView(fsq_result);
+    $('#toggle-details').on('click', function() {
+      $('#api_response_text').JSONView('toggle', 2);
+    });
+
+  </script>
+
+</html>

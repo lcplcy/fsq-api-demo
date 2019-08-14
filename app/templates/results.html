@@ -1,0 +1,210 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="author" content="colorlib.com">
+    <link
+      href="https://fonts.googleapis.com/css?family=Poppins"
+      rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous">
+    <link
+      href="{{ url_for('static', filename='css/results.css') }}"
+      rel="stylesheet" />
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.js"
+      integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+      crossorigin="anonymous">
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js"
+      integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
+      crossorigin="anonymous">
+    </script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+      integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+      crossorigin="anonymous">
+    </script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.js'></script>
+  </head>
+  <body>
+    <div class="s003">
+      <form>
+        <div class="inner-form form-group" >
+          <div class="input-field first-wrap" style="height: 50px;">
+            <div class="input-select">
+              <select data-trigger="" name="choices-single-defaul" id="search_type">
+                <option value="browse" placeholder="">Search</option>
+                <option value="checkin" placeholder="">Check In</option>
+                <option value="explore" >Explore</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-field second-wrap" style="height: 50px;">
+            <input id="search" type="text" placeholder="Enter Keywords?" />
+          </div>
+          <div class="input-field third-wrap" style="height: 50px;">
+            <button class="btn-search" type="button" onclick="search_api();">
+              <svg class="svg-inline--fa fa-search fa-w-16" aria-hidden="true" data-prefix="fas" data-icon="search" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                <path fill="currentColor" d="M505 442.7L405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34zM208 336c-70.7 0-128-57.2-128-128 0-70.7 57.2-128 128-128 70.7 0 128 57.2 128 128 0 70.7-57.2 128-128 128z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-row">
+            <div class="form-check col-4">
+              <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
+              <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
+            </div>
+            <div class="col">
+                <input class="form-control" type="text" id="manual_latlng" placeholder="Key in lat long, or the name of a city.">
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="d-md-flex h-md-100 align-items-center">
+      <!-- First Half -->
+      <div id="list-frame" class="col-md-6 p-0 bg-indigo h-md-100">
+          <div class="d-md-flex align-items-center h-100 p-5 text-center justify-content-center">
+              <div class="container">
+                <div class="row">
+                  {% for feature in result_geojson["features"] %}
+                  <div class="card" style="height:100%;width:100%;">
+                    <img id="card_venue_image" class="card-img-top" style="height:30%;width:30%" src='{{ feature["properties"]["image"] }}'>
+                    <div class="card-body">
+                      <h5 class="card-title" id="card_venue_name">{{ feature["properties"]["venuename"] }}</h5>
+                      <h4 class="card-body">{{ feature["properties"]["rating"] }}</h4>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+      <!-- Second Half -->
+      <div id="map-frame" class="col-md-6 p-0 bg-white h-md-100 loginarea">
+        <div class="d-md-flex h-md-100 p-5 justify-content-center">
+          <div id="map" style='width:100%; height:400px'></div>
+        </div>
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/extention/choices.js') }}"></script>
+    <script>
+
+      mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
+
+      var currLocation;
+      var selected_type = "search";
+
+      const choices = new Choices('[data-trigger]',
+      {
+        searchEnabled: false,
+        itemSelectText: '',
+      });
+
+      document.getElementById("search_type").addEventListener('choice', function(event) {
+        selected_type = event.detail.value;
+      }, false);
+
+      // Bias the autocomplete object to the user's geographical location,
+      // as supplied by the browser's 'navigator.geolocation' object.
+      function geolocate() {
+       if ($("#useCurrLocation").is(':checked')){
+         $("#manual_latlng").attr('disabled','disabled');
+         if (navigator.geolocation) {
+           navigator.geolocation.getCurrentPosition(function(position) {
+             geolocation = {
+               lat: position.coords.latitude,
+               lng: position.coords.longitude
+             };
+             currLocation = position.coords.latitude.toString() + "," + position.coords.longitude.toString();
+             document.getElementById("manual_latlng").value = currLocation;
+           });
+         }
+       }else{
+         $("#manual_latlng").attr('disabled',false);
+         document.getElementById("manual_latlng").value = "";
+       }
+     }
+
+      function search_api(){
+       var query = document.getElementById("search").value;
+       var latlng = document.getElementById("manual_latlng").value;
+       window.location.href = "search?query=" + query + "&latlng=" + latlng + "&search_type=" + selected_type
+     }
+
+      var result_geojson = {{ result_geojson|safe }}
+      var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/light-v10',
+        center: [{{ map_center }}],
+        zoom: 3
+      });
+
+      map.on('load', function(){
+        map.addSource('fsq_result', {
+          type:'geojson',
+          data: result_geojson
+        });
+
+        map.addLayer({
+          id: 'markers-zero',
+          type: 'circle',
+          source: 'fsq_result',
+          filter: ["==", "rating", 0],
+          paint:{
+            "circle-radius": {
+              'base': 1.75,
+              'stops': [[12, 2], [22, 180]]
+            },
+            "circle-color": 'rgb(189,189,189)'
+          }
+        });
+
+
+
+        map.addLayer({
+          id: 'markers-non-zero',
+          type: 'circle',
+          source: 'fsq_result',
+          filter: ["!=", "rating", 0],
+          paint:{
+            "circle-radius": {
+              'base': 1.75,
+              'stops': [[12, 2], [22, 180]]
+            },
+            "circle-color":[
+              'interpolate',
+              ['linear'],
+              ['get','rating'],
+              0, 'rgb(229,245,224)',
+              5.0, 'rgb(161,217,155)',
+              9.0, 'rgb(49,163,84)'
+            ]
+          }
+        });
+
+
+      });
+
+      /*map.on('click','markers-rating-non-zero',function(e){
+        $("#card_venue_image").attr("src",e.features[0].properties.image);
+        document.getElementById("card_venue_name").textContent = e.features[0].properties.venuename;
+      });*/
+
+      var bounds = new mapboxgl.LngLatBounds();
+      result_geojson.features.forEach(function(feature){
+        bounds.extend(feature.geometry.coordinates);
+      });
+
+      map.fitBounds(bounds);
+    </script>
+  </body><!-- This templates was made by Colorlib (https://colorlib.com) -->
+</html>
