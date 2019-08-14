@@ -135,6 +135,7 @@
     {% endif %}
   </body>
   <script>
+
     // Bias the autocomplete object to the user's geographical location,
     // as supplied by the browser's 'navigator.geolocation' object.
     function geolocate() {
@@ -163,17 +164,52 @@
      var curr_location = document.getElementById("manual_latlng").value;
      window.location.href = "?cl=" + curr_location + "&search_type=explore";
     }
-    mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
-    {% if not no_results %}
-    var result_geojson = {{ result_geojson|safe }};
-    var fsq_result = {{ fsq_result|tojson|safe }};
 
+
+    {% if not no_results %}
+    mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
     var map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/light-v10',
       center: [{{ map_center }}],
       zoom: 3
     });
+
+    var canvas = map.getCanvasContainer();
+    var result_geojson = {{ result_geojson|safe }};
+    var fsq_result = {{ fsq_result|tojson|safe }};
+    var map_center = {
+      "type": "FeatureCollection",
+      "features": [{
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [{{ map_center }}]
+        }
+      }]
+    };
+
+    function onUp(e) {
+      var coords = e.lngLat;
+
+      canvas.style.cursor = '';
+
+      // Unbind mouse/touch events
+      map.off('mousemove', onMove);
+      map.off('touchmove', onMove);
+    }
+    function onMove(e) {
+      var coords = e.lngLat;
+
+      // Set a UI indicator for dragging.
+      canvas.style.cursor = 'grabbing';
+
+      // Update the Point feature in `geojson` coordinates
+      // and call setData to the source layer `point` on it.
+      map_center.features[0].geometry.coordinates = [coords.lng, coords.lat];
+      map.getSource('map_center').setData(map_center);
+    }
+
 
     map.on('load', function(){
       map.addSource('fsq_result', {
@@ -196,7 +232,54 @@
         }
       });
 
-      map.flyTo({center: [{{ map_center }}], zoom: map.getZoom() - 1});
+      map.addSource('map_center',{
+        "type": "geojson",
+        "data": map_center
+      });
+      map.addLayer({
+        "id":"drag_point",
+        "type":"symbol",
+        "source":"map_center",
+        "layout":{
+          "icon-image":"marker-15",
+          "icon-allow-overlap": true,
+          "icon-size": 3,
+          "text-field": "Drag Me",
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 11,
+          "text-transform": "uppercase",
+          "text-letter-spacing": 0.05,
+          "text-offset": [0, 3]
+        }
+      });
+
+      map.flyTo({center: [{{ map_center }}], zoom: map.getZoom() - 0.5});
+
+      map.on('mouseenter','drag_point', function(){
+        canvas.style.cursor = 'move';
+      });
+
+      map.on('mouseleave', 'drag_point', function() {
+        canvas.style.cursor = '';
+      });
+
+      map.on('mousedown', 'drag_point', function(e) {
+        // Prevent the default map drag behavior.
+        e.preventDefault();
+        canvas.style.cursor = 'grab';
+
+        map.on('mousemove', onMove);
+        map.once('mouseup', onUp);
+        });
+      map.on('touchstart', 'drag_point', function(e) {
+        if (e.points.length !== 1) return;
+
+        // Prevent the default map drag behavior.
+        e.preventDefault();
+
+        map.on('touchmove', onMove);
+        map.once('touchend', onUp);
+        });
     });
 
     var bounds = new mapboxgl.LngLatBounds();
