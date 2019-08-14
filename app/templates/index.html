@@ -42,9 +42,13 @@
     <div class="container p-1">
       <button value="explore" class="btn btn-primary" onclick="venues_explore();">Venues/Explore</button>
       <button value="search" class="btn btn-primary" onclick="venues_search();">Venues/Search</button>
-      <button value="food" class="btn btn-outline-primary">Food</button>
-      <button value="travel" class="btn btn-outline-primary">Travel</button>
-      <button id="trigger_api" value="api_response" class="btn btn-outline-info">API Response</button>
+      <button value="food" class="btn btn-success">Food</button>
+      <button value="travel" class="btn btn-success">Travel</button>
+      {% if no_results %}
+      <button id="trigger_api" value="api_response" class="btn btn-outline-info" disabled>API Response</button>
+      {% else %}
+      <button id="trigger_api" value="api_response" class="btn btn-info">API Response</button>
+      {% endif %}
       <div class="form-check col-4 p-1">
         <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
         <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
