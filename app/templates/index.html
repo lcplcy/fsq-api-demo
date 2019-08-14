@@ -160,8 +160,10 @@
      window.location.href = "?cl=" + curr_location + "&search_type=explore";
     }
     mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
+    {% if not no_results %}
     var result_geojson = {{ result_geojson|safe }};
     var fsq_result = {{ fsq_result|tojson|safe }};
+
     var map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/light-v10',
@@ -239,11 +241,12 @@
 
     });
 
+
     $("#api_response_text").JSONView(fsq_result);
     $('#toggle-details').on('click', function() {
       $('#api_response_text').JSONView('toggle', 2);
     });
-
+    {% endif %}
   </script>
 
 </html>
