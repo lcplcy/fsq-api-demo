@@ -1,11 +1,17 @@
-from flask import render_template, request, redirect, url_for, session
+from flask import render_template, request, redirect, url_for, session, jsonify
 from app import app, client, geolocator, FSQ_CLIENT_ID, FSQ_CLIENT_SECRET, MAPBOX_ACCESS_KEY
+from flask_cors import cross_origin
 import re
 import os
 import json
 
 LATLNG_REGEX = re.compile("\-?(90|[0-8]?[0-9]\.[0-9]{0,6})\,\-?(180|(1[0-7][0-9]|[0-9]{0,2})\.[0-9]{0,6})")
 RESULT_LIMIT = 9
+#api stats per session
+#calculate for user foursquare price, ie. allow to key in user numbers,
+#details
+#break down api response  url into params
+
 
 def fsq_result_to_geojson(fsq_result, endpoint="search"):
     geojson = {'type': 'FeatureCollection', 'features': []}
@@ -113,6 +119,13 @@ def index():
                                 MAPBOX_ACCESS_KEY=MAPBOX_ACCESS_KEY)
     else:
         return render_template("index.html",no_results=no_results)
+
+@app.route('/details',methods=['GET'])
+@cross_origin()
+def venue_details():
+    venueid = request.args.get("venueid")
+    fsq_result = client.venues(venueid)["venue"]
+    return jsonify(fsq_result)
 
 @app.context_processor
 def override_url_for():

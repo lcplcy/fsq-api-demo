@@ -69,7 +69,7 @@
           <div class="d-md-flex align-items-center h-100 ml-5 text-center">
               <ul class="list-group">
                   {% for feature in result_geojson["features"] %}
-                  <li class="list-group-item justify-content-between align-items-center">
+                  <li id="marker_trigger_{{ feature['properties']['venueid'] }}" class="list-group-item justify-content-between align-items-center">
                     <a id="modal_trigger_{{ feature['properties']['venueid'] }}">{{ feature["properties"]["venuename"] }}</a>
                     {% if feature["properties"]["rating"] > 0 %}
                     <span class="badge badge-primary badge-pill">{{ feature["properties"]["rating"] }}</span>
@@ -81,27 +81,32 @@
           </div>
       <!-- Second Half -->
       <div id="map-frame" class="col-md-9 p-0 bg-white h-md-100 right-frame">
-        <div class="d-md-flex h-md-100 p-5 justify-content-center">
-          <div id="map" style='width:100%; height:400px'></div>
-          <!-- Venue Details Modal -->
-          <div class="modal fade" id="venue_detail" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div class="modal-body">
-                  ...
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button type="button" class="btn btn-primary">Save changes</button>
+        <div class="d-md-flex h-md-100 p-2 justify-content-center">
+          <div class="container">
+            <pre id="calls_from"></pre>
+            <div id="map" style='width:100%; height:400px'></div>
+            <!-- Venue Details Modals -->
+            {% for feature in result_geojson["features"] %}
+            <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="venue_name_{{ feature['properties']['venueid'] }}"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div id="venue_detail_{{ feature['properties']['venueid'] }}"class="modal-body">
+                    ...
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save changes</button>
+                  </div>
                 </div>
               </div>
             </div>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -113,8 +118,8 @@
             <div class="modal-header">
               <h5 class="modal-title">URL</h5>
             </div>
-            <div class="modal-body" style="overflow-y:unset;">
-              <pre class="pl-2" id="api_get_url" >{{ api_get_url }}</pre>
+            <div class="modal-body px-4 pt-4 pb-0" style="overflow-y:unset;">
+              <a id="api_get_url" href="#" title="Breakdown" data-toggle="popover"><p  >{{ api_get_url }}</p></a>
             </div>
             <div class="modal-header">
               <h5>Response</h5>
@@ -165,7 +170,6 @@
      window.location.href = "?cl=" + curr_location + "&search_type=explore";
     }
 
-
     {% if not no_results %}
     mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
     var map = new mapboxgl.Map({
@@ -189,14 +193,30 @@
       }]
     };
 
+    var getUrlParameter = function getUrlParameter(sParam) {
+      var sPageURL = window.location.search.substring(1),
+          sURLVariables = sPageURL.split('&'),
+          sParameterName,
+          i;
+
+      for (i = 0; i < sURLVariables.length; i++) {
+          sParameterName = sURLVariables[i].split('=');
+
+          if (sParameterName[0] === sParam) {
+              return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+          }
+      }
+    };
     function onUp(e) {
       var coords = e.lngLat;
-
       canvas.style.cursor = '';
 
       // Unbind mouse/touch events
       map.off('mousemove', onMove);
       map.off('touchmove', onMove);
+      var search_type=getUrlParameter('search_type')
+      window.location.href = "?cl=" + coords.lat + "," + coords.lng + "&search_type=" + search_type;
+
     }
     function onMove(e) {
       var coords = e.lngLat;
@@ -249,7 +269,7 @@
           "text-size": 11,
           "text-transform": "uppercase",
           "text-letter-spacing": 0.05,
-          "text-offset": [0, 3]
+          "text-offset": [0, 0]
         }
       });
 
@@ -291,6 +311,8 @@
 
     $(document).ready(function(){
 
+      document.getElementById("manual_latlng").value=getUrlParameter("cl");
+      document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type");
       {% for feature in result_geojson["features"] %}
       $("body").on("click","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
 
@@ -302,13 +324,26 @@
           //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
           $('body').removeClass("modal-open")
           $('body').css("padding-right","");
+
+          $.ajax({
+            url:"https://fsq-api.herokuapp.com/details?venueid={{ feature['properties']['venueid'] }}",
+            type:'GET',
+            contentType:"application/json",
+            dataType:"json",
+            success: function(data){
+              console.log(data.response);
+              document.getElementById("venue_name_{{ feature['properties']['venueid'] }}").innerText=data.response.name;
+            }
+
+          })
+
       });
 
-      $("body").on("mouseover","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
+      $("body").on("mouseover","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
           map.setFilter('markers',["==",['string',['get','venueid']],"{{ feature['properties']['venueid'] }}"]);
       });
 
-      $("body").on("mouseout","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
+      $("body").on("mouseout","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
           map.setFilter('markers');
       });
 
@@ -326,13 +361,27 @@
            $('body').css("padding-right","");
        });
 
+       $('[data-toggle="popover"]').popover({
+         container: "body",
+         trigger: "hover",
+         placement: "top",
+         html: true,
+         content: "{% for i in split_string(split_string(api_get_url,'?')[1],'&') %}{{i}}<br/>{% endfor %}"
+       });
     });
 
 
     $("#api_response_text").JSONView(fsq_result);
+
+
+
     $('#toggle-details').on('click', function() {
       $('#api_response_text').JSONView('toggle', 2);
     });
+
+
+
+
     {% endif %}
   </script>
 
