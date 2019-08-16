@@ -336,23 +336,29 @@
         "type": "geojson",
         "data": map_center
       });
-      map.addLayer({
-        "id":"drag_point",
-        "type":"symbol",
-        "source":"map_center",
-        "layout":{
-          "icon-image":"marker-15",
-          "icon-allow-overlap": true,
-          "icon-size": 4,
-          "text-field": "Drag Me",
-          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-          "text-size": 11,
-          "text-transform": "uppercase",
-          "text-letter-spacing": 0.05,
-          "text-offset": [0, 0],
-          "text-allow-overlap": true
-        }
+
+      map.loadImage('https://www.google.com/intl/en_us/mapfiles/ms/micons/blue-dot.png', function(error, image){
+        if (error) throw error;
+        map.addImage('drag_point_img', image);
+        map.addLayer({
+          "id":"drag_point",
+          "type":"symbol",
+          "source":"map_center",
+          "layout":{
+            "icon-image":"drag_point_img",
+            "icon-allow-overlap": true,
+            "icon-size": 4,
+            "text-field": "Drag Me",
+            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-size": 11,
+            "text-transform": "uppercase",
+            "text-letter-spacing": 0.05,
+            "text-offset": [0, 0],
+            "text-allow-overlap": true
+          }
+        });
       });
+
 
       map.flyTo({center: [{{ map_center }}], zoom: map.getZoom() - 0.5});
 
