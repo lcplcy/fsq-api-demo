@@ -31,6 +31,14 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
         feature['properties']['venuename'] = row["name"]
         feature['properties']['venueid'] = row["id"]
 
+        try:
+            for index,i in enumerate(row["categories"]):
+                if i["primary"]:
+                    category_icon = row["categories"][index]["icon"]["prefix"] + "44" + row["categories"][index]["icon"]["suffix"]
+                    feature['properties']['category_icon'] = category_icon
+        except (KeyError,IndexError) as e:
+            feature['properties']['category_icon'] = "http://maps.google.com/mapfiles/ms/micons/blue.png"
+
         address = ""
         try:
             address = row["location"]["address"]
@@ -46,13 +54,6 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
             pass
         feature['properties']['rating'] = rating
 
-        image = ""
-        try:
-            image = venue_details["bestPhoto"]["prefix"] + "100x100" + venue_details["bestPhoto"]["suffix"]
-        except KeyError:
-            pass
-
-        feature['properties']['image'] = image
         geojson['features'].append(feature)
     return geojson
 
