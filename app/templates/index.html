@@ -36,23 +36,50 @@
   </head>
   <body>
     <!-- Trigger Search -->
-    <div class="container p-1">
-      <button value="explore" class="btn btn-primary" onclick="venues_explore();">Venues/Explore</button>
-      <button value="search" class="btn btn-primary" onclick="venues_search();">Venues/Search</button>
-      <button value="food" class="btn btn-success">Food</button>
-      <button value="travel" class="btn btn-success">Travel</button>
-      {% if no_results %}
-      <button id="trigger_api" value="api_response" class="btn btn-outline-info" disabled>API Response</button>
-      {% else %}
-      <button id="trigger_api" value="api_response" class="btn btn-info">API Response</button>
-      {% endif %}
-      <div class="form-check col-4 p-1">
-        <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
-        <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
+    <div class="container p-1 px-1 pt-2 pb-1 border-bottom shadow-sm">
+      <div class="row">
+        <div class="col-7">
+          <ul class="nav">
+            <li class="nav-item py-2 px-1">
+              <button value="explore" class="nav-link btn btn-primary" onclick="venues_explore();">Venues/Explore</button>
+            </li>
+            <li class="nav-item py-2 px-1">
+              <button value="search" class="nav-link btn btn-primary" onclick="venues_search();">Venues/Search</button>
+            </li>
+            <li class="nav-item py-2 px-1">
+              <button value="food" class="nav-link btn btn-success" onclick="venues_explore_section('food')">Food</button>
+            </li>
+            <li class="nav-item py-2 px-1">
+              <button value="travel" class="nav-link btn btn-success" onclick="venues_explore_section('sights')">Travel</button>
+            </li>
+            <li class="nav-item py-2 px-1">
+              {% if no_results %}
+              <button id="trigger_api" value="api_response" class="nav-link btn btn-outline-info" disabled>API Response</button>
+              {% else %}
+              <button id="trigger_api" value="api_response" class="nav-link btn btn-info">API Response</button>
+              {% endif %}
+            </li>
+          </ul>
+          <div class="form">
+            <div class="form-check col-4 p-1">
+              <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
+              <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
+            </div>
+            <div class="col p-1">
+                <input class="form-control" type="text" id="manual_latlng" placeholder="Key in lat long, or the name of a city.">
+            </div>
+          </div>
+        </div>
+        <div class="col-2"></div>
+        <div class="col-3">
+          <div class="card text-right py-2 px-1">
+            <pre id="api_calls_tracker"></pre>
+            <a href="/">Reset Session</a>
+            <a id="trigger_calc" data-toggle="modal" data-target="#calc">Estimate Usage</a>
+          </div>
+        </div>
       </div>
-      <div class="col p-1">
-          <input class="form-control" type="text" id="manual_latlng" placeholder="Key in lat long, or the name of a city.">
-      </div>
+
 
     </div>
 
@@ -64,15 +91,7 @@
       <!-- First Half -->
       <div id="list-frame" class="col-md-3 p-0 bg-indigo h-md-100">
           <div class="d-md-flex align-items-center h-100 ml-5 text-center">
-              <ul class="list-group">
-                  {% for feature in result_geojson["features"] %}
-                  <li id="marker_trigger_{{ feature['properties']['venueid'] }}" class="list-group-item justify-content-between align-items-center">
-                    <a id="modal_trigger_{{ feature['properties']['venueid'] }}">{{ feature["properties"]["venuename"] }}</a>
-                    {% if feature["properties"]["rating"] > 0 %}
-                    <span class="badge badge-primary badge-pill">{{ feature["properties"]["rating"] }}</span>
-                    {% endif %}
-                  </li>
-                  {% endfor %}
+              <ul id="api-results-list" class="list-group">
               </ul>
             </div>
           </div>
@@ -139,7 +158,8 @@
                       </div>
                       <div class="col-lg-7">
                         <h5 id="venue_name"></h5>
-                        <h6 id="venue_id"></h6>
+                        <h6 class="font-italic text-decoration-none " id="venue_id"></h6>
+
 
                         <div class="accordion md-accordion pt-1" id="accordion" role="tablist" aria-multiselectable="true">
                           <div class="card">
@@ -199,7 +219,7 @@
               <h5 class="modal-title">URL</h5>
             </div>
             <div class="modal-body px-4 pt-4 pb-0" style="overflow-y:unset;">
-              <a id="api_get_url" href="#" title="Breakdown" data-toggle="popover"><p  >{{ api_get_url }}</p></a>
+              <a class="text-decoration-none" id="api_get_url" href="#" title="Breakdown" data-toggle="popover"><p  >{{ api_get_url }}</p></a>
             </div>
             <div class="modal-header">
               <h5>Response</h5>
@@ -218,6 +238,25 @@
 
     </div>
     {% endif %}
+    <div class="modal fade" id="calc" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-scrollable modal-m" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Estimate API Usage</h5>
+          </div>
+          <div class="modal-body">
+            <form>
+              <label for="num_users" class="col-form-label">Number of Users:</label>
+              <input type="text" class="form-control" id="num_users">
+            </form>
+            <p id="calc_answer"></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
   <script>
 
@@ -249,8 +288,48 @@
      var curr_location = document.getElementById("manual_latlng").value;
      window.location.href = "?cl=" + curr_location + "&search_type=explore";
     }
+    function venues_explore_section(section){
+      var curr_location = document.getElementById("manual_latlng").value;
+      window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section;
+    }
+    function readCookie(name) {
+      var nameEQ = name + '=';
+      var ca = document.cookie.split(';');
+      for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+      }
+      return null;
+    }
+    function prettyNumbers(number){
+      if (typeof number == "number"){
+        return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      }else if (typeof number == "string"){
+        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      }
+    }
+    {% if no_results %}
+    try{
+      if(localStorage.getItem){
+        localStorage.total_api_calls = 0;
+        document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem('total_api_calls');
+      }else{
+        setCookie('total_api_calls', 0, 1);
+        document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie('total_api_calls');
+      }
+    }catch(e){
+      console.log(e);
+    }
+    {% else %}
+    if(localStorage.getItem){
+      localStorage.total_api_calls = parseInt(localStorage.getItem('total_api_calls')) + 1;
+      document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem('total_api_calls');
+    }else{
+      setCookie('total_api_calls', parseInt(readCookie('total_api_calls')) + 1, 1);
+      document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie('total_api_calls');
+    }
 
-    {% if not no_results %}
     mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
     var map = new mapboxgl.Map({
       container: 'map',
@@ -337,7 +416,6 @@
       });
       {% endfor %}
 
-
       map.addSource('map_center',{
         "type": "geojson",
         "data": map_center
@@ -369,7 +447,6 @@
         });
       });
 
-
       map.flyTo({center: [{{ map_center }}], zoom: map.getZoom() - 0.5});
 
       map.on('mouseenter','drag_point', function(){
@@ -398,11 +475,14 @@
         map.once('touchend', onUp);
         });
 
-
-
-
-
       {% for feature in result_geojson["features"] %}
+      var api_results_list = document.getElementById('api-results-list');
+
+      var api_result = document.createElement("li");
+      api_result.classList.add("list-group-item","justify-content-between","align-items-center");
+      api_result.id = "marker_trigger_{{ feature['properties']['venueid'] }}"
+      api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
+      api_results_list.append(api_result)
 
       $("body").on("mouseover","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
           for(var i = 0; i < point_layers.length; i++){
@@ -424,6 +504,146 @@
         }
             //map.setFilter('markers');
         });
+
+      $("body").on("click","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
+
+            $.ajax({
+              url:"https://fsq-api.herokuapp.com/details?venueid={{ feature['properties']['venueid'] }}",
+              type:'GET',
+              contentType:"application/json",
+              dataType:"json",
+              success: function(data){
+                document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span>"
+
+                var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
+                document.getElementById("venue_id").innerHTML="<a href='" + detail_api + "'>" + data.id + "</a>";
+
+                if("rating" in data){
+                  document.getElementById("venue_rating").innerHTML=data.rating
+                }else{
+                  document.getElementById("venue_rating").innerHTML="-"
+                }
+
+
+                $("#venue_detail_basic").empty();
+                var basic_list = document.getElementById("venue_detail_basic");
+
+                var li_address = document.createElement("li");
+                li_address.classList.add("list-group-item");
+                var formatted_address = ""
+                if (data.location.formattedAddress.length > 0){
+                  for(var address_i = 0; address_i < data.location.formattedAddress.length; address_i++){
+
+                    if (address_i < data.location.formattedAddress.length-1){
+                      formatted_address = formatted_address + data.location.formattedAddress[address_i] + "</br>";
+                    }else{
+                      console.log(data.location.formattedAddress[address_i]);
+                      formatted_address = formatted_address + data.location.formattedAddress[address_i];
+                    }
+                  }
+                }else{
+                  formatted_address = data.location.address + "(" + data.location.crossStreet + ")</br>" + data.location.postalCode + "</br>" + data.location.city + ", " + data.location.country;
+                }
+                li_address.innerHTML = formatted_address;
+                basic_list.append(li_address);
+
+
+                var li_latlng = document.createElement("li");
+                li_latlng.classList.add("list-group-item");
+                li_latlng.innerHTML = "<small>" + data.location.lat.toString() + ", " + data.location.lng.toString() + "</small>";
+                basic_list.append(li_latlng);
+
+                var li_categories = document.createElement("li");
+                li_categories.classList.add("list-group-item");
+                var pri_cat_text = "";
+                var other_cat_text = "";
+                var pri_cat_img = "";
+                for(var cat_i = 0; cat_i < data.categories.length; cat_i++){
+                  if (data.categories[cat_i].primary){
+                    pri_cat_text = data.categories[cat_i].name;
+                    pri_cat_img = data.categories[cat_i].icon.prefix + "bg_88" + data.categories[cat_i].icon.suffix
+                  }else {
+                    other_cat_text = other_cat_text + "/" + data.categories[cat_i].name;
+                  }
+                }
+                var pri_cat = document.createElement("strong");
+                pri_cat.innerHTML = pri_cat_text;
+                li_categories.append(pri_cat);
+
+                if (other_cat_text.substring(1).length > 0){
+                  li_categories.innerHTML = "<small>" + li_categories.innerHTML + " and " + other_cat_text.substring(1) + "</small>";
+                }
+                basic_list.append(li_categories);
+
+                var li_contact = document.createElement("li");
+                li_contact.classList.add("list-group-item");
+                var phone = "";
+                var twitter = "";
+                var facebook = "";
+                if ("formattedPhone" in data.contact){
+                  phone = data.contact.formattedPhone;
+                }
+                if ("twitter" in data.contact){
+                  twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
+                }
+                if ("facebook" in data.contact){
+                  facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
+                }
+                var contactHtml = "<small>" + phone + " / " + twitter + " / " + facebook + "</small>";
+                li_contact.innerHTML = contactHtml.replace("/ /", "");
+                basic_list.append(li_contact);
+
+                var bestphoto_url = pri_cat_img;
+                var photo1_url = pri_cat_img;
+                var photo2_url = pri_cat_img;
+
+                var num_photos_api = data.photos.groups[1].items.length;
+
+                if (data.photos.count > 0){
+                  if ("bestPhoto" in data){
+                    bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
+                  }
+                  var random_photo_1, random_photo_2;
+                  if(data.photos.groups[1].items.length >= 2){
+                    random_photo_1 = getRandomInt(num_photos_api-1);
+                    photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+                    while(photo1_url == bestphoto_url){
+                      random_photo_1 = getRandomInt(num_photos_apih-1);
+                      photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+                    }
+                  }
+                  if(data.photos.groups[1].items.length >= 3){
+                    random_photo_2 = getRandomInt(num_photos_api-1);
+                    photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
+
+                    while(random_photo_2 == random_photo_1 || photo2_url == bestphoto_url){
+                      console.log(data.photos.groups[1].length-1);
+                      random_photo_2 = getRandomInt(num_photos_api-1);
+                      photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
+
+                    }
+
+                  }
+                }
+
+                $("#venue_photo_bestphoto").attr('src', bestphoto_url);
+                $("#venue_photo_photo1").attr('src',photo1_url);
+                $("#venue_photo_photo2").attr('src',photo2_url);
+
+                // TODO: add captions to credit photo and date taken
+
+                $("#venue_detail_modal").modal("show");
+                //appending modal background inside the blue div
+                $('.modal-backdrop').appendTo('#map-frame');
+                //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
+                $('body').removeClass("modal-open")
+                $('body').css("padding-right","");
+              }
+
+            })
+
+        });
+
       {% endfor %}
     });
 
@@ -438,141 +658,6 @@
 
       document.getElementById("manual_latlng").value=getUrlParameter("cl");
       document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type");
-      {% for feature in result_geojson["features"] %}
-      $("body").on("click","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
-
-          $.ajax({
-            url:"https://fsq-api.herokuapp.com/details?venueid={{ feature['properties']['venueid'] }}",
-            type:'GET',
-            contentType:"application/json",
-            dataType:"json",
-            success: function(data){
-              document.getElementById("venue_name").innerText=data.name;
-
-              var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
-              document.getElementById("venue_id").innerHTML="<a href='" + detail_api + "'>" + data.id + "</a>";
-
-              $("#venue_detail_basic").empty();
-              var basic_list = document.getElementById("venue_detail_basic");
-
-              var li_address = document.createElement("li");
-              li_address.classList.add("list-group-item");
-              var formatted_address = ""
-              if (data.location.formattedAddress.length > 0){
-                for(var address_i = 0; address_i < data.location.formattedAddress.length; address_i++){
-
-                  if (address_i < data.location.formattedAddress.length-1){
-                    formatted_address = formatted_address + data.location.formattedAddress[address_i] + "</br>";
-                  }else{
-                    console.log(data.location.formattedAddress[address_i]);
-                    formatted_address = formatted_address + data.location.formattedAddress[address_i];
-                  }
-                }
-              }else{
-                formatted_address = data.location.address + "(" + data.location.crossStreet + ")</br>" + data.location.postalCode + "</br>" + data.location.city + ", " + data.location.country;
-              }
-              li_address.innerHTML = formatted_address;
-              basic_list.append(li_address);
-
-
-              var li_latlng = document.createElement("li");
-              li_latlng.classList.add("list-group-item");
-              li_latlng.innerHTML = "<small>" + data.location.lat.toString() + ", " + data.location.lng.toString() + "</small>";
-              basic_list.append(li_latlng);
-
-              var li_categories = document.createElement("li");
-              li_categories.classList.add("list-group-item");
-              var pri_cat_text = "";
-              var other_cat_text = "";
-              var pri_cat_img = "";
-              for(var cat_i = 0; cat_i < data.categories.length; cat_i++){
-                if (data.categories[cat_i].primary){
-                  pri_cat_text = data.categories[cat_i].name;
-                  pri_cat_img = data.categories[cat_i].icon.prefix + "bg_88" + data.categories[cat_i].icon.suffix
-                }else {
-                  other_cat_text = other_cat_text + "/" + data.categories[cat_i].name;
-                }
-              }
-              var pri_cat = document.createElement("strong");
-              pri_cat.innerHTML = pri_cat_text;
-              li_categories.append(pri_cat);
-
-              if (other_cat_text.substring(1).length > 0){
-                li_categories.innerHTML = "<small>" + li_categories.innerHTML + " and " + other_cat_text.substring(1) + "</small>";
-              }
-              basic_list.append(li_categories);
-
-              var li_contact = document.createElement("li");
-              li_contact.classList.add("list-group-item");
-              var phone = "";
-              var twitter = "";
-              var facebook = "";
-              if ("formattedPhone" in data.contact){
-                phone = data.contact.formattedPhone;
-              }
-              if ("twitter" in data.contact){
-                twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
-              }
-              if ("facebook" in data.contact){
-                facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
-              }
-              var contactHtml = "<small>" + phone + " / " + twitter + " / " + facebook + "</small>";
-              li_contact.innerHTML = contactHtml.replace("/ /", "");
-              basic_list.append(li_contact);
-
-              var bestphoto_url = pri_cat_img;
-              var photo1_url = pri_cat_img;
-              var photo2_url = pri_cat_img;
-
-              if (data.photos.count > 0){
-                if ("bestPhoto" in data){
-                  bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
-                }else{
-                  if (data.photos.groups[1].count > 0){
-                    bestphoto_url = data.photos.groups[1].items[0].prefix + "300x300" + data.photos.groups[1].items[0].suffix;
-                  }
-                }
-                var random_photo_1, random_photo_2;
-                console.log(data.photos.groups[1].count);
-                if(data.photos.groups[1].count >= 2){
-                  console.log(photo1_url);
-                  random_photo_1 = getRandomInt(data.photos.groups[1].items.length-1);
-                  photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
-                  console.log(photo1_url);
-                }
-                if(data.photos.groups[1].count >= 3){
-                  random_photo_2 = getRandomInt(data.photos.groups[1].items.length-1);
-                  photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
-
-                  while(random_photo_2 == random_photo_1 || photo2_url == bestphoto_url){
-                    random_photo_2 = getRandomInt(data.photos.groups[1].count-1);
-                    photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
-                  }
-
-                }
-              }
-
-              $("#venue_photo_bestphoto").attr('src', bestphoto_url);
-              $("#venue_photo_photo1").attr('src',photo1_url);
-              $("#venue_photo_photo2").attr('src',photo2_url);
-
-              // TODO: add captions to credit photo and date taken
-
-              $("#venue_detail_modal").modal("show");
-              //appending modal background inside the blue div
-              $('.modal-backdrop').appendTo('#map-frame');
-              //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
-              $('body').removeClass("modal-open")
-              $('body').css("padding-right","");
-            }
-
-          })
-
-      });
-
-
-
-      {% endfor %}
 
       $("body").on("click","#trigger_api",function(){
 
@@ -593,19 +678,23 @@
          html: true,
          content: "{% for i in split_string(split_string(api_get_url,'?')[1],'&') %}{{i}}<br/>{% endfor %}"
        });
+
+      document.getElementById("num_users").addEventListener('input',(event)=>{
+        var calc_answer = document.getElementById("calc_answer");
+        if(localStorage.getItem){
+          calc_answer.innerHTML = "Monthly API Call Volume: " + prettyNumbers(parseInt(localStorage.getItem('total_api_calls')) * 30 * event.target.value);
+        }else{
+          calc_answer.innerHTML = "Monthly API Call Volume: " + prettyNumbers(parseInt(readCookie('total_api_calls')) * 30 * event.target.value);
+        }
+      });
     });
 
 
     $("#api_response_text").JSONView(fsq_result);
 
-
-
     $('#toggle-details').on('click', function() {
       $('#api_response_text').JSONView('toggle', 2);
     });
-
-
-
 
     {% endif %}
   </script>

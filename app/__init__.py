@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_session import Session
 from flask_cors import CORS, cross_origin
 import foursquare
 from config import Config
@@ -9,6 +10,7 @@ def split_string(string, delimiter=" "):
 
 app = Flask(__name__)
 CORS(app)
+Session(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config.from_object(Config)
 geolocator = GoogleV3(api_key=app.config['GOOGLEMAPSAPI_KEY'], timeout=None)

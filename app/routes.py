@@ -23,6 +23,8 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
         for i in fsq_items:
             fsq_array.append(i["venue"])
     for row in fsq_array:
+        if len(row["categories"]) == 0:
+            continue
         feature = {'type': 'Feature',
                    'properties': {},
                    'geometry': {'type': 'Point',
@@ -46,6 +48,7 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
             pass
         feature['properties']['address'] = address
 
+        """ Pull rating from the venue details API
         rating = 0
         venue_details = client.venues(row["id"])["venue"]
         try:
@@ -53,7 +56,7 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
         except KeyError:
             pass
         feature['properties']['rating'] = rating
-
+        """
         geojson['features'].append(feature)
     return geojson
 
@@ -80,7 +83,7 @@ def index():
     fsq_result = ""
     result_geojson = ""
     map_center = ""
-    api_get_url = "https://api.foursquare.com/v2/venues/{search_type}?client_id={{client_id}}&client_secret={{client_secret}}&v={{v}}&limit=10&radius=250&{ll_or_near}&{intent}"
+    api_get_url = "https://api.foursquare.com/v2/venues/{search_type}?client_id={{client_id}}&client_secret={{client_secret}}&v={{v}}&limit=10&radius=250&{ll_or_near}{intent}"
 
     if search_type:
         curr_location = request.args.get("cl")
@@ -92,26 +95,43 @@ def index():
                                                           'intent':"browse",
                                                           'radius':250,
                                                           'limit': RESULT_LIMIT})
-                api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="intent=browse")
+                api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="&intent=browse")
             else:
                 fsq_result = client.venues.search(params={'near': curr_location,
                                                           'intent':"browse",
                                                           'radius':250,
                                                           'limit': RESULT_LIMIT})
-                api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="intent=browse")
+                api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="&intent=browse")
             result_geojson = fsq_result_to_geojson(fsq_result, endpoint="search")
             map_center = fsq_result_calc_center(fsq_result, endpoint="search")
         if search_type == "explore":
-            if LATLNG_REGEX.match(curr_location):
-                fsq_result = client.venues.explore(params={'ll': curr_location,
-                                                          'radius':250,
-                                                          'limit': RESULT_LIMIT})
-                api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="")
+            section = ""
+            if "section" in request.args:
+                section = request.args.get("section")
+            if len(section) > 0:
+                if LATLNG_REGEX.match(curr_location):
+                    fsq_result = client.venues.explore(params={'ll': curr_location,
+                                                              'radius':250,
+                                                              'section':section,
+                                                              'limit': RESULT_LIMIT})
+                    api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="") + "&section=" + section
+                else:
+                    fsq_result = client.venues.explore(params={'near': curr_location,
+                                                              'radius':250,
+                                                              'section':section,
+                                                              'limit': RESULT_LIMIT})
+                    api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="") + "&section=" + section
             else:
-                fsq_result = client.venues.explore(params={'near': curr_location,
-                                                          'radius':250,
-                                                          'limit': RESULT_LIMIT})
-                api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="")
+                if LATLNG_REGEX.match(curr_location):
+                    fsq_result = client.venues.explore(params={'ll': curr_location,
+                                                              'radius':250,
+                                                              'limit': RESULT_LIMIT})
+                    api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="")
+                else:
+                    fsq_result = client.venues.explore(params={'near': curr_location,
+                                                              'radius':250,
+                                                              'limit': RESULT_LIMIT})
+                    api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="")
             result_geojson = fsq_result_to_geojson(fsq_result, endpoint="explore")
             map_center = fsq_result_calc_center(fsq_result, endpoint="explore")
         return render_template("index.html",no_results=no_results,
