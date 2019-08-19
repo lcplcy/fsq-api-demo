@@ -7,11 +7,14 @@ import json
 
 LATLNG_REGEX = re.compile("\-?(90|[0-8]?[0-9]\.[0-9]{0,6})\,\-?(180|(1[0-7][0-9]|[0-9]{0,2})\.[0-9]{0,6})")
 RESULT_LIMIT = 9
-#api stats per session
-#calculate for user foursquare price, ie. allow to key in user numbers,
 #details
-#break down api response  url into params
 
+@app.before_request
+def before_request():
+    if request.url.startswith('http://'):
+        url = request.url.replace('http://', 'https://', 1)
+        code = 301
+        return redirect(url, code=code)
 
 def fsq_result_to_geojson(fsq_result, endpoint="search"):
     geojson = {'type': 'FeatureCollection', 'features': []}
