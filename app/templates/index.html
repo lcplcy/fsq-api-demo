@@ -138,8 +138,10 @@
                         <!--/.Carousel Wrapper-->
                       </div>
                       <div class="col-lg-7">
-                        <h2 class="h2-responsive" id="venue_name"></h2>
-                        <div class="accordion md-accordion" id="accordion" role="tablist" aria-multiselectable="true">
+                        <h5 id="venue_name"></h5>
+                        <h6 id="venue_id"></h6>
+
+                        <div class="accordion md-accordion pt-1" id="accordion" role="tablist" aria-multiselectable="true">
                           <div class="card">
                             <div class="card-header" role="tab" id="venue_details_basic_heading">
                               <a data-toggle="collapse" data-parent="#accordion" href="#collapse_basic" aria-expanded="true" aria-controls="collapse_basic">
@@ -147,7 +149,9 @@
                               </a>
                             </div>
                             <div id="collapse_basic" class="collapse show" role="tabpanel" aria-labelledby="collapse_basic" data-parent="#accordion">
-                              <div id="venue_detail_basic" class="card-body">
+                              <div class="card-body p-0">
+                                <ul class="list-group list-group-flush" id="venue_detail_basic">
+                                </ul>
                               </div>
                             </div>
                           </div>
@@ -305,7 +309,9 @@
       map_center.features[0].geometry.coordinates = [coords.lng, coords.lat];
       map.getSource('map_center').setData(map_center);
     }
-
+    function getRandomInt(max) {
+      return Math.floor(Math.random() * Math.floor(max));
+    }
 
     map.on('load', function(){
       map.addSource('fsq_result', {
@@ -350,11 +356,15 @@
             "icon-size": 1,
             "text-field": "Drag Me",
             "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+
             "text-size": 11,
             "text-transform": "uppercase",
             "text-letter-spacing": 0.05,
-            "text-offset": [0, 0],
+            "text-offset": [0, 1.3],
             "text-allow-overlap": true
+          },
+          "paint":{
+              "text-color": "rgb(255,255,255)"
           }
         });
       });
@@ -438,9 +448,110 @@
             dataType:"json",
             success: function(data){
               document.getElementById("venue_name").innerText=data.name;
-              bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
-              photo1_url = data.photos.groups[1].items[1].prefix + "300x300" + data.photos.groups[1].items[1].suffix;
-              photo2_url = data.photos.groups[1].items[2].prefix + "300x300" + data.photos.groups[1].items[2].suffix;
+
+              var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
+              document.getElementById("venue_id").innerHTML="<a href='" + detail_api + "'>" + data.id + "</a>";
+
+              $("#venue_detail_basic").empty();
+              var basic_list = document.getElementById("venue_detail_basic");
+
+              var li_address = document.createElement("li");
+              li_address.classList.add("list-group-item");
+              var formatted_address = ""
+              if (data.location.formattedAddress.length > 0){
+                for(var address_i = 0; address_i < data.location.formattedAddress.length; address_i++){
+
+                  if (address_i < data.location.formattedAddress.length-1){
+                    formatted_address = formatted_address + data.location.formattedAddress[address_i] + "</br>";
+                  }else{
+                    console.log(data.location.formattedAddress[address_i]);
+                    formatted_address = formatted_address + data.location.formattedAddress[address_i];
+                  }
+                }
+              }else{
+                formatted_address = data.location.address + "(" + data.location.crossStreet + ")</br>" + data.location.postalCode + "</br>" + data.location.city + ", " + data.location.country;
+              }
+              li_address.innerHTML = formatted_address;
+              basic_list.append(li_address);
+
+
+              var li_latlng = document.createElement("li");
+              li_latlng.classList.add("list-group-item");
+              li_latlng.innerHTML = "<small>" + data.location.lat.toString() + ", " + data.location.lng.toString() + "</small>";
+              basic_list.append(li_latlng);
+
+              var li_categories = document.createElement("li");
+              li_categories.classList.add("list-group-item");
+              var pri_cat_text = "";
+              var other_cat_text = "";
+              var pri_cat_img = "";
+              for(var cat_i = 0; cat_i < data.categories.length; cat_i++){
+                if (data.categories[cat_i].primary){
+                  pri_cat_text = data.categories[cat_i].name;
+                  pri_cat_img = data.categories[cat_i].icon.prefix + "bg_88" + data.categories[cat_i].icon.suffix
+                }else {
+                  other_cat_text = other_cat_text + "/" + data.categories[cat_i].name;
+                }
+              }
+              var pri_cat = document.createElement("strong");
+              pri_cat.innerHTML = pri_cat_text;
+              li_categories.append(pri_cat);
+
+              if (other_cat_text.substring(1).length > 0){
+                li_categories.innerHTML = "<small>" + li_categories.innerHTML + " and " + other_cat_text.substring(1) + "</small>";
+              }
+              basic_list.append(li_categories);
+
+              var li_contact = document.createElement("li");
+              li_contact.classList.add("list-group-item");
+              var phone = "";
+              var twitter = "";
+              var facebook = "";
+              if ("formattedPhone" in data.contact){
+                phone = data.contact.formattedPhone;
+              }
+              if ("twitter" in data.contact){
+                twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
+              }
+              if ("facebook" in data.contact){
+                facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
+              }
+              var contactHtml = "<small>" + phone + " / " + twitter + " / " + facebook + "</small>";
+              li_contact.innerHTML = contactHtml.replace("/ /", "");
+              basic_list.append(li_contact);
+
+              var bestphoto_url = pri_cat_img;
+              var photo1_url = pri_cat_img;
+              var photo2_url = pri_cat_img;
+
+              if (data.photos.count > 0){
+                if ("bestPhoto" in data){
+                  bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
+                }else{
+                  if (data.photos.groups[1].count > 0){
+                    bestphoto_url = data.photos.groups[1].items[0].prefix + "300x300" + data.photos.groups[1].items[0].suffix;
+                  }
+                }
+                var random_photo_1, random_photo_2;
+                console.log(data.photos.groups[1].count);
+                if(data.photos.groups[1].count >= 2){
+                  console.log(photo1_url);
+                  random_photo_1 = getRandomInt(data.photos.groups[1].items.length-1);
+                  photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+                  console.log(photo1_url);
+                }
+                if(data.photos.groups[1].count >= 3){
+                  random_photo_2 = getRandomInt(data.photos.groups[1].items.length-1);
+                  photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
+
+                  while(random_photo_2 == random_photo_1 || photo2_url == bestphoto_url){
+                    random_photo_2 = getRandomInt(data.photos.groups[1].count-1);
+                    photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
+                  }
+
+                }
+              }
+
               $("#venue_photo_bestphoto").attr('src', bestphoto_url);
               $("#venue_photo_photo1").attr('src',photo1_url);
               $("#venue_photo_photo2").attr('src',photo2_url);
