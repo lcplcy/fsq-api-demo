@@ -516,7 +516,7 @@
                 document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span>"
 
                 var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
-                document.getElementById("venue_id").innerHTML="<a href='" + detail_api + "'>" + data.id + "</a>";
+                document.getElementById("venue_id").innerHTML="<a target='_blank' href='" + detail_api + "'>" + data.id + "</a>";
 
                 if("rating" in data){
                   document.getElementById("venue_rating").innerHTML=data.rating
