@@ -257,6 +257,7 @@
         </div>
       </div>
     </div>
+    <div class="loading_modal"></div>
   </body>
   <script>
 
@@ -309,26 +310,47 @@
         return number.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
       }
     }
-    {% if no_results %}
-    try{
-      if(localStorage.getItem){
-        localStorage.total_api_calls = 0;
-        document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem('total_api_calls');
-      }else{
-        setCookie('total_api_calls', 0, 1);
-        document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie('total_api_calls');
+    function change_api_cookie(type_of_change,key){
+      if (type_of_change == "+"){
+        if(localStorage.getItem){
+          localStorage.total_api_calls = parseInt(localStorage.getItem(key)) + 1;
+          document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem(key);
+        }else{
+          setCookie(key, parseInt(readCookie(key)) + 1, 1);
+          document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie(key);
+        }
+      }else if (type_of_change == "-"){
+        if (type_of_change == "+"){
+          if(localStorage.getItem){
+            if(parseInt(localStorage.getItem(key)) - 1 >= 0){
+              localStorage.total_api_calls = parseInt(localStorage.getItem(key)) - 1;
+              document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem(key);
+            }
+          }else{
+            if(parseInt(readCookie(key)) - 1 >= 0){
+              setCookie(key, parseInt(readCookie(key)) - 1, 1);
+              document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie(key);
+            }
+          }
+      }else if (type_of_change == "reset"){
+        try{
+          if(localStorage.getItem){
+            localStorage.total_api_calls = 0;
+            document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem(key);
+          }else{
+            setCookie(key, 0, 1);
+            document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie(key);
+          }
+        }catch(e){
+          console.log(e);
+        }
       }
-    }catch(e){
-      console.log(e);
     }
+  }
+    {% if no_results %}
+    change_api_cookie("reset","total_api_calls");
     {% else %}
-    if(localStorage.getItem){
-      localStorage.total_api_calls = parseInt(localStorage.getItem('total_api_calls')) + 1;
-      document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem('total_api_calls');
-    }else{
-      setCookie('total_api_calls', parseInt(readCookie('total_api_calls')) + 1, 1);
-      document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie('total_api_calls');
-    }
+    change_api_cookie("+","total_api_calls");
 
     mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
     var map = new mapboxgl.Map({
@@ -338,6 +360,7 @@
       zoom: 3
     });
 
+    var result_venueids = [{% for feature in result_geojson["features"] %}'{{ feature["properties"]["venueid"] }}',{% endfor %}]
     var canvas = map.getCanvasContainer();
     var result_geojson = {{ result_geojson|safe }};
     var fsq_result = {{ fsq_result|tojson|safe }};
@@ -391,6 +414,144 @@
     function getRandomInt(max) {
       return Math.floor(Math.random() * Math.floor(max));
     }
+    function open_venue_details_modal(venueid){
+      $.ajax({
+        url:"https://fsq-api.herokuapp.com/details?venueid="+venueid,
+        type:'GET',
+        contentType:"application/json",
+        dataType:"json",
+        success: function(data){
+          change_api_cookie("+","total_api_calls");
+          document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span>"
+
+          var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
+          document.getElementById("venue_id").innerHTML="<a target='_blank' href='" + detail_api + "'>" + data.id + "</a>";
+
+          if("rating" in data){
+            document.getElementById("venue_rating").innerHTML=data.rating
+          }else{
+            document.getElementById("venue_rating").innerHTML="-"
+          }
+
+
+          $("#venue_detail_basic").empty();
+          var basic_list = document.getElementById("venue_detail_basic");
+
+          var li_address = document.createElement("li");
+          li_address.classList.add("list-group-item");
+          var formatted_address = ""
+          if (data.location.formattedAddress.length > 0){
+            for(var address_i = 0; address_i < data.location.formattedAddress.length; address_i++){
+
+              if (address_i < data.location.formattedAddress.length-1){
+                formatted_address = formatted_address + data.location.formattedAddress[address_i] + "</br>";
+              }else{
+                console.log(data.location.formattedAddress[address_i]);
+                formatted_address = formatted_address + data.location.formattedAddress[address_i];
+              }
+            }
+          }else{
+            formatted_address = data.location.address + "(" + data.location.crossStreet + ")</br>" + data.location.postalCode + "</br>" + data.location.city + ", " + data.location.country;
+          }
+          li_address.innerHTML = formatted_address;
+          basic_list.append(li_address);
+
+
+          var li_latlng = document.createElement("li");
+          li_latlng.classList.add("list-group-item");
+          li_latlng.innerHTML = "<small>" + data.location.lat.toString() + ", " + data.location.lng.toString() + "</small>";
+          basic_list.append(li_latlng);
+
+          var li_categories = document.createElement("li");
+          li_categories.classList.add("list-group-item");
+          var pri_cat_text = "";
+          var other_cat_text = "";
+          var pri_cat_img = "";
+          for(var cat_i = 0; cat_i < data.categories.length; cat_i++){
+            if (data.categories[cat_i].primary){
+              pri_cat_text = data.categories[cat_i].name;
+              pri_cat_img = data.categories[cat_i].icon.prefix + "bg_88" + data.categories[cat_i].icon.suffix
+            }else {
+              other_cat_text = other_cat_text + "/" + data.categories[cat_i].name;
+            }
+          }
+          var pri_cat = document.createElement("strong");
+          pri_cat.innerHTML = pri_cat_text;
+          li_categories.append(pri_cat);
+
+          if (other_cat_text.substring(1).length > 0){
+            li_categories.innerHTML = "<small>" + li_categories.innerHTML + " and " + other_cat_text.substring(1) + "</small>";
+          }
+          basic_list.append(li_categories);
+
+          var li_contact = document.createElement("li");
+          li_contact.classList.add("list-group-item");
+          var phone = "";
+          var twitter = "";
+          var facebook = "";
+          if ("formattedPhone" in data.contact){
+            phone = data.contact.formattedPhone;
+          }
+          if ("twitter" in data.contact){
+            twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
+          }
+          if ("facebook" in data.contact){
+            facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
+          }
+          var contactHtml = "<small>" + phone + " / " + twitter + " / " + facebook + "</small>";
+          li_contact.innerHTML = contactHtml.replace("/ /", "");
+          basic_list.append(li_contact);
+
+          var bestphoto_url = pri_cat_img;
+          var photo1_url = pri_cat_img;
+          var photo2_url = pri_cat_img;
+
+          var num_photos_api = data.photos.groups[1].items.length;
+
+          if (data.photos.count > 0){
+            if ("bestPhoto" in data){
+              bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
+            }
+            var random_photo_1, random_photo_2;
+            if(data.photos.groups[1].items.length >= 2){
+              random_photo_1 = getRandomInt(num_photos_api-1);
+              photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+              while(photo1_url == bestphoto_url){
+                random_photo_1 = getRandomInt(num_photos_api-1);
+                photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+              }
+            }
+            if(data.photos.groups[1].items.length >= 3){
+              random_photo_2 = getRandomInt(num_photos_api-1);
+              photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
+
+              while(random_photo_2 == random_photo_1 || photo2_url == bestphoto_url){
+                console.log(data.photos.groups[1].length-1);
+                random_photo_2 = getRandomInt(num_photos_api-1);
+                photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
+
+              }
+
+            }
+          }
+
+          $("#venue_photo_bestphoto").attr('src', bestphoto_url);
+          $("#venue_photo_photo1").attr('src',photo1_url);
+          $("#venue_photo_photo2").attr('src',photo2_url);
+
+          // TODO: add captions to credit photo and date taken
+
+          $("#venue_detail_modal").modal("show");
+          //appending modal background inside the blue div
+          $('.modal-backdrop').appendTo('#map-frame');
+          //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
+          $('body').removeClass("modal-open")
+          $('body').css("padding-right","");
+        }
+
+      });
+
+    }
 
     map.on('load', function(){
       map.addSource('fsq_result', {
@@ -413,6 +574,35 @@
             "icon-allow-overlap": true,
           }
         });
+      });
+
+      map.on('click', 'point_{{feature["properties"]["venueid"]}}', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var venueid = e.features[0].properties.venueid;
+        open_venue_details_modal(venueid);
+      });
+
+      map.on('mouseenter','point_{{feature["properties"]["venueid"]}}', function (e){
+        var list_item;
+
+        for(var index = 0; index < result_venueids.length; index ++){
+          list_item = document.getElementById("marker_trigger_" + result_venueids[index]);
+          if (result_venueids[index] != "{{ feature['properties']['venueid'] }}"){
+            list_item.classList.remove("active");
+          }else{
+            list_item.classList.add("active");
+          }
+        }
+
+      });
+      map.on('mouseleave','point_{{feature["properties"]["venueid"]}}', function (e){
+        var list_item;
+
+        for(var index = 0; index < result_venueids.length; index ++){
+          list_item = document.getElementById("marker_trigger_" + result_venueids[index]);
+          list_item.classList.remove("active");
+        }
+
       });
       {% endfor %}
 
@@ -452,11 +642,9 @@
       map.on('mouseenter','drag_point', function(){
         canvas.style.cursor = 'move';
       });
-
       map.on('mouseleave', 'drag_point', function() {
         canvas.style.cursor = '';
       });
-
       map.on('mousedown', 'drag_point', function(e) {
         // Prevent the default map drag behavior.
         e.preventDefault();
@@ -475,14 +663,15 @@
         map.once('touchend', onUp);
         });
 
-      {% for feature in result_geojson["features"] %}
       var api_results_list = document.getElementById('api-results-list');
+      var api_result;
+      {% for feature in result_geojson["features"] %}
 
-      var api_result = document.createElement("li");
+      api_result = document.createElement("li");
       api_result.classList.add("list-group-item","justify-content-between","align-items-center");
       api_result.id = "marker_trigger_{{ feature['properties']['venueid'] }}"
       api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
-      api_results_list.append(api_result)
+      api_results_list.append(api_result);
 
       $("body").on("mouseover","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
           for(var i = 0; i < point_layers.length; i++){
@@ -495,7 +684,6 @@
           }
             //map.setFilter('markers',["==",['string',['get','venueid']],"{{ feature['properties']['venueid'] }}"]);
         });
-
       $("body").on("mouseout","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
         for(var i = 0; i < point_layers.length; i++){
 
@@ -504,144 +692,8 @@
         }
             //map.setFilter('markers');
         });
-
       $("body").on("click","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
-
-            $.ajax({
-              url:"https://fsq-api.herokuapp.com/details?venueid={{ feature['properties']['venueid'] }}",
-              type:'GET',
-              contentType:"application/json",
-              dataType:"json",
-              success: function(data){
-                document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span>"
-
-                var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
-                document.getElementById("venue_id").innerHTML="<a target='_blank' href='" + detail_api + "'>" + data.id + "</a>";
-
-                if("rating" in data){
-                  document.getElementById("venue_rating").innerHTML=data.rating
-                }else{
-                  document.getElementById("venue_rating").innerHTML="-"
-                }
-
-
-                $("#venue_detail_basic").empty();
-                var basic_list = document.getElementById("venue_detail_basic");
-
-                var li_address = document.createElement("li");
-                li_address.classList.add("list-group-item");
-                var formatted_address = ""
-                if (data.location.formattedAddress.length > 0){
-                  for(var address_i = 0; address_i < data.location.formattedAddress.length; address_i++){
-
-                    if (address_i < data.location.formattedAddress.length-1){
-                      formatted_address = formatted_address + data.location.formattedAddress[address_i] + "</br>";
-                    }else{
-                      console.log(data.location.formattedAddress[address_i]);
-                      formatted_address = formatted_address + data.location.formattedAddress[address_i];
-                    }
-                  }
-                }else{
-                  formatted_address = data.location.address + "(" + data.location.crossStreet + ")</br>" + data.location.postalCode + "</br>" + data.location.city + ", " + data.location.country;
-                }
-                li_address.innerHTML = formatted_address;
-                basic_list.append(li_address);
-
-
-                var li_latlng = document.createElement("li");
-                li_latlng.classList.add("list-group-item");
-                li_latlng.innerHTML = "<small>" + data.location.lat.toString() + ", " + data.location.lng.toString() + "</small>";
-                basic_list.append(li_latlng);
-
-                var li_categories = document.createElement("li");
-                li_categories.classList.add("list-group-item");
-                var pri_cat_text = "";
-                var other_cat_text = "";
-                var pri_cat_img = "";
-                for(var cat_i = 0; cat_i < data.categories.length; cat_i++){
-                  if (data.categories[cat_i].primary){
-                    pri_cat_text = data.categories[cat_i].name;
-                    pri_cat_img = data.categories[cat_i].icon.prefix + "bg_88" + data.categories[cat_i].icon.suffix
-                  }else {
-                    other_cat_text = other_cat_text + "/" + data.categories[cat_i].name;
-                  }
-                }
-                var pri_cat = document.createElement("strong");
-                pri_cat.innerHTML = pri_cat_text;
-                li_categories.append(pri_cat);
-
-                if (other_cat_text.substring(1).length > 0){
-                  li_categories.innerHTML = "<small>" + li_categories.innerHTML + " and " + other_cat_text.substring(1) + "</small>";
-                }
-                basic_list.append(li_categories);
-
-                var li_contact = document.createElement("li");
-                li_contact.classList.add("list-group-item");
-                var phone = "";
-                var twitter = "";
-                var facebook = "";
-                if ("formattedPhone" in data.contact){
-                  phone = data.contact.formattedPhone;
-                }
-                if ("twitter" in data.contact){
-                  twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
-                }
-                if ("facebook" in data.contact){
-                  facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
-                }
-                var contactHtml = "<small>" + phone + " / " + twitter + " / " + facebook + "</small>";
-                li_contact.innerHTML = contactHtml.replace("/ /", "");
-                basic_list.append(li_contact);
-
-                var bestphoto_url = pri_cat_img;
-                var photo1_url = pri_cat_img;
-                var photo2_url = pri_cat_img;
-
-                var num_photos_api = data.photos.groups[1].items.length;
-
-                if (data.photos.count > 0){
-                  if ("bestPhoto" in data){
-                    bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
-                  }
-                  var random_photo_1, random_photo_2;
-                  if(data.photos.groups[1].items.length >= 2){
-                    random_photo_1 = getRandomInt(num_photos_api-1);
-                    photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
-                    while(photo1_url == bestphoto_url){
-                      random_photo_1 = getRandomInt(num_photos_api-1);
-                      photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
-                    }
-                  }
-                  if(data.photos.groups[1].items.length >= 3){
-                    random_photo_2 = getRandomInt(num_photos_api-1);
-                    photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
-
-                    while(random_photo_2 == random_photo_1 || photo2_url == bestphoto_url){
-                      console.log(data.photos.groups[1].length-1);
-                      random_photo_2 = getRandomInt(num_photos_api-1);
-                      photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
-
-                    }
-
-                  }
-                }
-
-                $("#venue_photo_bestphoto").attr('src', bestphoto_url);
-                $("#venue_photo_photo1").attr('src',photo1_url);
-                $("#venue_photo_photo2").attr('src',photo2_url);
-
-                // TODO: add captions to credit photo and date taken
-
-                $("#venue_detail_modal").modal("show");
-                //appending modal background inside the blue div
-                $('.modal-backdrop').appendTo('#map-frame');
-                //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
-                $('body').removeClass("modal-open")
-                $('body').css("padding-right","");
-              }
-
-            })
-
+            open_venue_details_modal("{{ feature['properties']['venueid'] }}");
         });
 
       {% endfor %}

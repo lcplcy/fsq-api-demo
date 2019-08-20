@@ -16,6 +16,7 @@ def before_request():
         code = 301
         return redirect(url, code=code)
 
+
 def fsq_result_to_geojson(fsq_result, endpoint="search"):
     geojson = {'type': 'FeatureCollection', 'features': []}
     fsq_array = []
