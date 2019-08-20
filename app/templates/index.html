@@ -332,8 +332,8 @@
               document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie(key);
             }
           }
+        }
       }else if (type_of_change == "reset"){
-        try{
           if(localStorage.getItem){
             localStorage.setItem(key,0);
             document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem(key);
@@ -341,12 +341,8 @@
             setCookie(key, 0, 1);
             document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie(key);
           }
-        }catch(e){
-          console.log(e);
-        }
       }
     }
-  }
     {% if no_results %}
     change_api_cookie("reset","total_api_calls");
     {% else %}
