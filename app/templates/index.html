@@ -128,17 +128,20 @@
     {% else %}
     <!-- Search Result Display -->
     <div class="main">
+      <div class="container pt-1">
+        <form>
+          <div class="dropdown">
+            <input class="form-control" data-toggle="dropdown" type="text" id="query_input" placeholder="Suggest Complete (More than 3 chars)"  data-display="static">
+            <div class="dropdown-menu dropdown-menu-md-right" id="suggestcomplete_dropdown" aria-labelledby="query_input">
+            </div>
+          </div>
+        </form>
+      </div>
         <div class="container">
           <div class="row">
           <!-- First Half -->
-          <div id="list-frame" class="col-3 p-1 overflow-auto" style="display:block;overflow:scroll;height:350px;">
-            <div>
-              <form>
-                <input class="form-control" type="text" id="query_input" placeholder="Query">
-                <div class="dropdown-menu" data-toggle="dropdown" id="suggestcomplete_dropdown">
-                </div>
-              </form>
-            </div>
+          <div id="list-frame" class="col-3 p-1 overflow-auto" style="display:block;overflow:scroll;height:400px;">
+
             <div class="align-items-center text-center">
                 <ul id="api-results-list" class="list-group">
                 </ul>
@@ -146,10 +149,10 @@
           </div>
           <!-- Second Half -->
           <div id="map-frame" class="col-9">
-            <div class="p-2">
+            <div class="p-0">
               <div class="container">
                 <pre id="calls_from"></pre>
-                <div id="map" style='width:100%; height:400px'></div>
+                <div id="map" style='width:100%; height:350px'></div>
                 <!-- Venue Details Modal -->
                 <div class="modal fade" id="venue_detail_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
                   <div class="modal-dialog modal-lg" role="document">
@@ -334,17 +337,15 @@
     function venues_search(){
       var forms = document.getElementsByClassName('needs-validation');
       var validation = Array.prototype.filter.call(forms, function(form){
-        if(form.checkValidity()===false){
-          form.classList.add('was-validated')
-        }else{
-          var query = document.getElementById("query_input").value;
-          if (query.length == 0){
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form){
+          if(form.checkValidity()===false){
+            form.classList.add('was-validated')
+          }else{
             var curr_location = document.getElementById("manual_latlng").value;
             window.location.href = "?cl=" + curr_location + "&search_type=search";
-          }else{
-            window.location.href = "?cl=" + curr_location + "&search_type=search&query=" + query;
           }
-        }
+        });
       });
     }
     function venues_explore(){
@@ -834,20 +835,24 @@
             url:"https://fsq-api.herokuapp.com/suggestcomplete?cl="+ curr_location + "&query=" + query,
             type:'GET',
             contentType:"application/json",
+            global: false,
             dataType:"json",
             success: function(data){
               change_api_cookie("+","total_api_calls");
-              var sc_dropdown = document.getElementById("suggestcomplete_dropdown")
-              for(var index = 0; index < data.minivenues.length; index ++){
-                var sc_item = document.createElement("a");
-                sc_item.innerHTML = data.name;
-                sc_dropdown.append(sc_item);
+              var sc_dropdown = document.getElementById("suggestcomplete_dropdown");
+              sc_dropdown.innerHTML = "";
+              if(data.minivenues.length > 0){
+                for(var index = 0; index < data.minivenues.length; index ++){
+                  sc_dropdown.innerHTML = sc_dropdown.innerHTML + "<a class='dropdown-item' onclick=open_venue_details_modal('" + data.minivenues[index].id +"')>" + data.minivenues[index].name + "</a>"
+                }
               }
-              sc_dropdown.dropdown('show');
             }
           });
+        }else{
+          var sc_dropdown = document.getElementById("suggestcomplete_dropdown");
+          sc_dropdown.innerHTML = "";
         }
-      }
+      });
     });
 
 
