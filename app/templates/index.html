@@ -428,7 +428,8 @@
     change_api_cookie("reset","total_api_calls");
     change_api_cookie("reset","details_api_calls");
     change_api_cookie("reset","search_api_calls");
-    change_api_cookie("reset","explore_api_calls")
+    change_api_cookie("reset","explore_api_calls");
+    change_api_cookie("reset","suggestcomplete_api_calls");
     {% else %}
 
 
@@ -839,6 +840,7 @@
             dataType:"json",
             success: function(data){
               change_api_cookie("+","total_api_calls");
+              change_api_cookie("+","suggestcomplete_api_calls");
               var sc_dropdown = document.getElementById("suggestcomplete_dropdown");
               sc_dropdown.innerHTML = "";
               if(data.minivenues.length > 0){
@@ -876,11 +878,15 @@
         if(localStorage.getItem){
           newTitle = "Details: " + localStorage.details_api_calls +
                      "</br>Search: " + localStorage.search_api_calls +
-                     "</br>Explore: " + localStorage.explore_api_calls + "</br>"
+                     "</br>Explore: " + localStorage.explore_api_calls +
+                     "</br>Suggest Completion: " + localStorage.suggestcomplete_api_calls +
+                     "</br>";
         }else{
           newTitle = "Details: " + readCookie("details_api_calls") +
                      "</br>Search: " + readCookie("search_api_calls") +
-                     "</br>Explore: " + readCookie("explore_api_calls") + "</br>"
+                     "</br>Explore: " + readCookie("explore_api_calls") +
+                     "</br>Suggest Completion: " + readCookie("suggestcomplete_api_calls") +
+                     "</br>";
         }
 
         $('#api_calls_tracker').attr('title',newTitle).tooltip('_fixTitle');
