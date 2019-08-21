@@ -32,6 +32,37 @@
         position: relative;
       }
 
+      /* Start by setting display:none to make this hidden.
+      Then we position it in relation to the viewport window
+      with position:fixed. Width, height, top and left speak
+      for themselves. Background we set to 80% white with
+      our animation centered, and no-repeating */
+      .loading_modal {
+        display:    none;
+        position:   fixed;
+        z-index:    1000;
+        top:        0;
+        left:       0;
+        height:     100%;
+        width:      100%;
+        background: rgba( 255, 255, 255, .8 )
+                    url('http://i.stack.imgur.com/FhHRx.gif')
+                    50% 50%
+                    no-repeat;
+      }
+
+      /* When the body has the loading class, we turn
+      the scrollbar off with overflow:hidden */
+      body.loading .loading_modal {
+        overflow: hidden;
+      }
+
+      /* Anytime the body has the loading class, our
+      modal element will be visible */
+      body.loading .loading_modal {
+        display: block;
+      }
+
     </style>
   </head>
   <body>
@@ -39,6 +70,21 @@
     <div class="container p-1 px-1 pt-2 pb-1 border-bottom shadow-sm">
       <div class="row">
         <div class="col-7">
+          <form class="needs-validation" novalidate>
+            <div class="form">
+              <div class="form-check col-4 p-1">
+                <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
+                <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
+              </div>
+              <div class="col p-1">
+                  <input class="form-control" type="text" id="manual_latlng" placeholder="Key in lat long, or the name of a city." required>
+                  <div class="invalid-feedback">
+                    Please provide a geographic name or coordinate.
+                    Check the "Use Current Location" box to generate your current coordinates.
+                  </div>
+              </div>
+            </div>
+        </form>
           <ul class="nav">
             <li class="nav-item py-2 px-1">
               <button value="explore" class="nav-link btn btn-primary" onclick="venues_explore();">Venues/Explore</button>
@@ -60,20 +106,11 @@
               {% endif %}
             </li>
           </ul>
-          <div class="form">
-            <div class="form-check col-4 p-1">
-              <input class="form-check-input" type="checkbox" onchange="geolocate();" id="useCurrLocation" style="margin-left: 0;">
-              <label class="form-check-label" for="useCurrLocation" style="margin-left: 1.25rem;">Use Current Location</label>
-            </div>
-            <div class="col p-1">
-                <input class="form-control" type="text" id="manual_latlng" placeholder="Key in lat long, or the name of a city.">
-            </div>
-          </div>
         </div>
         <div class="col-2"></div>
         <div class="col-3">
           <div class="card text-right py-2 px-1">
-            <pre id="api_calls_tracker"></pre>
+            <pre data-toggle="tooltip" data-placement="left" data-html="true" title="Details: </br>Search: </br>Explore: </br>" id="api_calls_tracker"></pre>
             <a href="/">Reset Session</a>
             <a id="trigger_calc" data-toggle="modal" data-target="#calc">Estimate Usage</a>
           </div>
@@ -282,16 +319,37 @@
      }
     }
     function venues_search(){
-     var curr_location = document.getElementById("manual_latlng").value;
-     window.location.href = "?cl=" + curr_location + "&search_type=search";
+      var forms = document.getElementsByClassName('needs-validation');
+      var validation = Array.prototype.filter.call(forms, function(form){
+        if(form.checkValidity()===false){
+          form.classList.add('was-validated')
+        }else{
+          var curr_location = document.getElementById("manual_latlng").value;
+          window.location.href = "?cl=" + curr_location + "&search_type=search";
+        }
+      });
     }
     function venues_explore(){
-     var curr_location = document.getElementById("manual_latlng").value;
-     window.location.href = "?cl=" + curr_location + "&search_type=explore";
+      var forms = document.getElementsByClassName('needs-validation');
+      var validation = Array.prototype.filter.call(forms, function(form){
+        if(form.checkValidity()===false){
+          form.classList.add('was-validated')
+        }else{
+          var curr_location = document.getElementById("manual_latlng").value;
+          window.location.href = "?cl=" + curr_location + "&search_type=explore";
+        }
+      });
     }
     function venues_explore_section(section){
-      var curr_location = document.getElementById("manual_latlng").value;
-      window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section;
+      var forms = document.getElementsByClassName('needs-validation');
+      var validation = Array.prototype.filter.call(forms, function(form){
+        if(form.checkValidity()===false){
+          form.classList.add('was-validated')
+        }else{
+          var curr_location = document.getElementById("manual_latlng").value;
+          window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section;
+        }
+      });
     }
     function readCookie(name) {
       var nameEQ = name + '=';
@@ -343,10 +401,16 @@
           }
       }
     }
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    });
     {% if no_results %}
     change_api_cookie("reset","total_api_calls");
+    change_api_cookie("reset","details_api_calls");
+    change_api_cookie("reset","search_api_calls");
+    change_api_cookie("reset","explore_api_calls")
     {% else %}
-    change_api_cookie("+","total_api_calls");
+
 
     mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
     var map = new mapboxgl.Map({
@@ -418,6 +482,7 @@
         dataType:"json",
         success: function(data){
           change_api_cookie("+","total_api_calls");
+          change_api_cookie("+","details_api_calls");
           document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span>"
 
           var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
@@ -502,9 +567,8 @@
           var photo1_url = pri_cat_img;
           var photo2_url = pri_cat_img;
 
-          var num_photos_api = data.photos.groups[1].items.length;
-
           if (data.photos.count > 0){
+            var num_photos_api = data.photos.groups[1].items.length;
             if ("bestPhoto" in data){
               bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
             }
@@ -549,6 +613,13 @@
 
     }
 
+    change_api_cookie("+","total_api_calls");
+
+    if(getUrlParameter("search_type") == "search"){
+      change_api_cookie("+","search_api_calls");
+    }else if(getUrlParameter("search_type") == "explore"){
+      change_api_cookie("+","explore_api_calls");
+    }
     map.on('load', function(){
       map.addSource('fsq_result', {
         type:'geojson',
@@ -745,6 +816,12 @@
     });
 
     {% endif %}
+    $body = $("body");
+
+    $(document).on({
+        ajaxStart: function() { $body.addClass("loading");    },
+        ajaxStop: function() { $body.removeClass("loading"); }
+    });
   </script>
 
 </html>
