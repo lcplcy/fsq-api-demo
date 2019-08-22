@@ -214,7 +214,7 @@ def venue_details():
     locale = request.args.get("locale")
     fsq_result = None
     if locale:
-        fsq_result = client.venues(venueid,params={'locale':locale})
+        fsq_result = client.venues(venueid,params={'locale':locale})["venue"]
     else:
         fsq_result = client.venues(venueid)["venue"]
     return jsonify(fsq_result)
