@@ -224,7 +224,7 @@ def venue_details():
 def suggest_complete():
     query = request.args.get("query")
     curr_location = request.args.get("cl")
-    locale = requests.args.get("locale")
+    locale = request.args.get("locale")
     fsq_result = None
 
     if LATLNG_REGEX.match(curr_location):
