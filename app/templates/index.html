@@ -76,7 +76,7 @@
   <body>
 
     <!-- Trigger Search -->
-    <div class="container p-1 px-1 pt-2 pb-1 border-bottom shadow-sm">
+    <div class="container px-1 pt-2 pb-1 border-bottom shadow-sm">
       <div class="row">
         <div class="col-7">
           <form class="needs-validation" novalidate>
@@ -116,7 +116,15 @@
             </li>
           </ul>
         </div>
-        <div class="col-2"></div>
+        <div class="col-2">
+          <form>
+            <div class="form-group">
+              <label for="locale_select">Locale (Optional)</label>
+              <select id="locale_select" class="form-control">
+              </select>
+            </div>
+        </form>
+        </div>
         <div class="col-3">
           <div class="card text-right py-2 px-1">
             <pre data-toggle="tooltip" data-placement="left" data-html="true" title="Details: </br>Search: </br>Explore: </br>" id="api_calls_tracker"></pre>
@@ -380,7 +388,12 @@
             form.classList.add('was-validated')
           }else{
             var curr_location = document.getElementById("manual_latlng").value;
-            window.location.href = "?cl=" + curr_location + "&search_type=search";
+            var locale = document.getElementById("locale_select").value;
+            if(locale.length > 0){
+              window.location.href = "?cl=" + curr_location + "&search_type=search&locale=" + locale;
+            }else{
+              window.location.href = "?cl=" + curr_location + "&search_type=search";
+            }
           }
         });
       });
@@ -392,7 +405,12 @@
           form.classList.add('was-validated')
         }else{
           var curr_location = document.getElementById("manual_latlng").value;
-          window.location.href = "?cl=" + curr_location + "&search_type=explore";
+          var locale = document.getElementById("locale_select").value;
+          if(locale.length > 0){
+            window.location.href = "?cl=" + curr_location + "&search_type=explore&locale=" + locale;
+          }else{
+            window.location.href = "?cl=" + curr_location + "&search_type=explore";
+          }
         }
       });
     }
@@ -403,7 +421,13 @@
           form.classList.add('was-validated')
         }else{
           var curr_location = document.getElementById("manual_latlng").value;
-          window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section;
+          var locale = document.getElementById("locale_select").value;
+          if(locale.length > 0){
+            window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section + "&locale=" + locale;
+          }
+          else{
+            window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section;
+          }
         }
       });
     }
@@ -461,6 +485,7 @@
     $(function () {
       $('[data-toggle="tooltip"]').tooltip()
     });
+    var supported_locales = ["","en","es","fr","de","it","ja","th","tr","ko","ru","pt","id","zh"]
     {% if no_results %}
     change_api_cookie("reset","total_api_calls");
     change_api_cookie("reset","details_api_calls");
@@ -514,8 +539,13 @@
       // Unbind mouse/touch events
       map.off('mousemove', onMove);
       map.off('touchmove', onMove);
-      var search_type=getUrlParameter('search_type')
-      window.location.href = "?cl=" + coords.lat + "," + coords.lng + "&search_type=" + search_type;
+      var search_type=getUrlParameter('search_type');
+      var locale = document.getElementById('locale_select').value;
+      if (locale.length > 0){
+        window.location.href = "?cl=" + coords.lat + "," + coords.lng + "&search_type=" + search_type + "&locale=" + locale;
+      }else{
+        window.location.href = "?cl=" + coords.lat + "," + coords.lng + "&search_type=" + search_type;
+      }
 
     }
     function onMove(e) {
@@ -533,8 +563,13 @@
       return Math.floor(Math.random() * Math.floor(max));
     }
     function open_venue_details_modal(venueid){
+      var call_url = "https://fsq-api.herokuapp.com/details?venueid="+venueid;
+      var locale = document.getElementById("locale_select").value;
+      if (locale.length > 0){
+        call_url = call_url + "&locale=" + locale;
+      }
       $.ajax({
-        url:"https://fsq-api.herokuapp.com/details?venueid="+venueid,
+        url:call_url,
         type:'GET',
         contentType:"application/json",
         dataType:"json",
@@ -542,8 +577,11 @@
           change_api_cookie("+","total_api_calls");
           change_api_cookie("+","details_api_calls");
           document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span> <span class='badge badge-pill' id='venue_status'></span>"
-
+          var locale = document.getElementById("locale_select").value;
           var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
+          if(locale.length > 0){
+            detail_api = detail_api + "&locale=" + locale;
+          }
           document.getElementById("venue_id").innerHTML="<a target='_blank' href='" + detail_api + "'>" + data.id + "</a>";
 
           if("rating" in data){
@@ -853,7 +891,7 @@
             "text-allow-overlap": true
           },
           "paint":{
-              "text-color": "rgb(255,255,255)"
+              "text-color": "rgb(7,50,162)"
           }
         });
       });
@@ -930,6 +968,12 @@
     $(document).ready(function(){
 
       document.getElementById("manual_latlng").value=getUrlParameter("cl");
+      if(getUrlParameter("locale")){
+        document.getElementById("locale_select").value=getUrlParameter("locale");
+      }else{
+        document.getElementById("locale_select").value="";
+      }
+      document.getElementById("locale_select").value=getUrlParameter("locale");
       document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type");
 
       $("body").on("click","#trigger_api",function(){
@@ -965,8 +1009,13 @@
         var query = document.getElementById("query_input").value;
         if(query.length >= 3){
           var curr_location = document.getElementById("manual_latlng").value;
+          var locale = document.getElementById("locale_select").value;
+          var call_url = "https://fsq-api.herokuapp.com/suggestcomplete?cl="+ curr_location + "&query=" + query;
+          if (locale.length > 0){
+            call_url = call_url + "&locale=" + locale;
+          }
           $.ajax({
-            url:"https://fsq-api.herokuapp.com/suggestcomplete?cl="+ curr_location + "&query=" + query,
+            url:call_url,
             type:'GET',
             contentType:"application/json",
             global: false,
@@ -988,6 +1037,7 @@
           sc_dropdown.innerHTML = "";
         }
       });
+
     });
 
 
@@ -1005,6 +1055,12 @@
         ajaxStop: function() { $body.removeClass("loading"); }
     });
 
+    var locale_select = document.getElementById("locale_select");
+    for(var index=0;index < supported_locales.length; index++){
+      var select_option = document.createElement("option");
+      select_option.innerHTML = supported_locales[index];
+      locale_select.append(select_option);
+    }
 
     $('#api_calls_tracker').on('show.bs.tooltip', function () {
         var newTitle;

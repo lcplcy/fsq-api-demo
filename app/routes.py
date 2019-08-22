@@ -88,26 +88,43 @@ def index():
     fsq_result = ""
     result_geojson = ""
     map_center = ""
-    api_get_url = "https://api.foursquare.com/v2/venues/{search_type}?client_id={{client_id}}&client_secret={{client_secret}}&v={{v}}&limit=10&radius=250&{ll_or_near}{intent}"
+    api_get_url = "https://api.foursquare.com/v2/venues/{search_type}?client_id={{client_id}}&client_secret={{client_secret}}&v=20190101&limit=10&radius=250&{ll_or_near}{intent}"
 
     if search_type:
         curr_location = request.args.get("cl")
         no_results = False
+        locale = request.args.get("locale")
 
         if search_type == "search":
             try:
                 if LATLNG_REGEX.match(curr_location):
-                    fsq_result = client.venues.search(params={'ll': curr_location,
-                                                              'intent':"browse",
-                                                              'radius':250,
-                                                              'limit': RESULT_LIMIT})
-                    api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="&intent=browse")
+                    if locale:
+                        fsq_result = client.venues.search(params={'ll': curr_location,
+                                                                  'intent':"browse",
+                                                                  'radius':250,
+                                                                  'locale':locale,
+                                                                  'limit': RESULT_LIMIT})
+                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="&intent=browse") + "&locale=" + locale
+                    else:
+                        fsq_result = client.venues.search(params={'ll': curr_location,
+                                                                  'intent':"browse",
+                                                                  'radius':250,
+                                                                  'limit': RESULT_LIMIT})
+                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="&intent=browse")
                 else:
-                    fsq_result = client.venues.search(params={'near': curr_location,
+                    if locale:
+                        fsq_result = client.venues.search(params={'near': curr_location,
+                                                              'intent':"browse",
+                                                              'radius':250,
+                                                              'locale':locale,
+                                                              'limit': RESULT_LIMIT})
+                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="&intent=browse") + "&locale=" + locale
+                    else:
+                        fsq_result = client.venues.search(params={'near': curr_location,
                                                               'intent':"browse",
                                                               'radius':250,
                                                               'limit': RESULT_LIMIT})
-                    api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="&intent=browse")
+                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="&intent=browse")
             except (foursquare.ParamError,foursquare.FailedGeocode) as e:
                 curr_location = "1.2787325314969156,103.8434731966384"
                 return redirect("?search_type=search&cl=" + curr_location)
@@ -121,17 +138,33 @@ def index():
             if len(section) > 0:
                 try:
                     if LATLNG_REGEX.match(curr_location):
-                        fsq_result = client.venues.explore(params={'ll': curr_location,
-                                                                  'radius':250,
-                                                                  'section':section,
-                                                                  'limit': RESULT_LIMIT})
-                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="") + "&section=" + section
+                        if locale:
+                            fsq_result = client.venues.explore(params={'ll': curr_location,
+                                                                      'radius':250,
+                                                                      'section':section,
+                                                                      'locale':locale,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="") + "&section=" + section + "&locale=" + locale
+                        else:
+                            fsq_result = client.venues.explore(params={'ll': curr_location,
+                                                                      'radius':250,
+                                                                      'section':section,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="") + "&section=" + section
                     else:
-                        fsq_result = client.venues.explore(params={'near': curr_location,
-                                                                  'radius':250,
-                                                                  'section':section,
-                                                                  'limit': RESULT_LIMIT})
-                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="") + "&section=" + section
+                        if locale:
+                            fsq_result = client.venues.explore(params={'near': curr_location,
+                                                                      'radius':250,
+                                                                      'section':section,
+                                                                      'locale':locale,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="") + "&section=" + section + "&locale=" + locale
+                        else:
+                            fsq_result = client.venues.explore(params={'near': curr_location,
+                                                                      'radius':250,
+                                                                      'section':section,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="") + "&section=" + section
                 except (foursquare.ParamError,foursquare.FailedGeocode) as e:
                     curr_location = "1.2787325314969156,103.8434731966384"
                     return redirect("?search_type=explore&cl=" + curr_location + "&section=" + section)
@@ -139,15 +172,29 @@ def index():
             else:
                 try:
                     if LATLNG_REGEX.match(curr_location):
-                        fsq_result = client.venues.explore(params={'ll': curr_location,
-                                                                  'radius':250,
-                                                                  'limit': RESULT_LIMIT})
-                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="")
+                        if locale:
+                            fsq_result = client.venues.explore(params={'ll': curr_location,
+                                                                      'radius':250,
+                                                                      'locale':locale,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="") + "&locale=" + locale
+                        else:
+                            fsq_result = client.venues.explore(params={'ll': curr_location,
+                                                                      'radius':250,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="ll="+curr_location,intent="")
                     else:
-                        fsq_result = client.venues.explore(params={'near': curr_location,
-                                                                  'radius':250,
-                                                                  'limit': RESULT_LIMIT})
-                        api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="")
+                        if locale:
+                            fsq_result = client.venues.explore(params={'near': curr_location,
+                                                                      'radius':250,
+                                                                      'locale':locale,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="") + "&locale=" + locale
+                        else:
+                            fsq_result = client.venues.explore(params={'near': curr_location,
+                                                                      'radius':250,
+                                                                      'limit': RESULT_LIMIT})
+                            api_get_url = api_get_url.format(search_type=search_type,ll_or_near="near="+curr_location,intent="")
                 except (foursquare.ParamError,foursquare.FailedGeocode) as e:
                     curr_location = "1.2787325314969156,103.8434731966384"
                     return redirect("?search_type=explore&cl=" + curr_location)
@@ -164,7 +211,12 @@ def index():
 @cross_origin()
 def venue_details():
     venueid = request.args.get("venueid")
-    fsq_result = client.venues(venueid)["venue"]
+    locale = request.args.get("locale")
+    fsq_result = None
+    if locale:
+        fsq_result = client.venues(venueid,params={'locale':locale})
+    else:
+        fsq_result = client.venues(venueid)["venue"]
     return jsonify(fsq_result)
 
 @app.route('/suggestcomplete',methods=['GET'])
@@ -172,10 +224,33 @@ def venue_details():
 def suggest_complete():
     query = request.args.get("query")
     curr_location = request.args.get("cl")
-    fsq_result = client.venues.suggestcompletion(params={'ll': curr_location,
-                                              'radius': 250,
-                                              'query': query,
-                                              'limit': RESULT_LIMIT})
+    locale = requests.args.get("locale")
+    fsq_result = None
+
+    if LATLNG_REGEX.match(curr_location):
+        if locale:
+            fsq_result = client.venues.suggestcompletion(params={'ll': curr_location,
+                                                      'radius': 250,
+                                                      'query': query,
+                                                      'locale': locale,
+                                                      'limit': RESULT_LIMIT})
+        else:
+            fsq_result = client.venues.suggestcompletion(params={'ll': curr_location,
+                                                      'radius': 250,
+                                                      'query': query,
+                                                      'limit': RESULT_LIMIT})
+    else:
+        if locale:
+            fsq_result = client.venues.suggestcompletion(params={'near': curr_location,
+                                                      'radius': 250,
+                                                      'query': query,
+                                                      'locale': locale,
+                                                      'limit': RESULT_LIMIT})
+        else:
+            fsq_result = client.venues.suggestcompletion(params={'near': curr_location,
+                                                      'radius': 250,
+                                                      'query': query,
+                                                      'limit': RESULT_LIMIT})
     return jsonify(fsq_result)
 
 @app.context_processor
