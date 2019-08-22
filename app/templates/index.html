@@ -227,17 +227,21 @@
                                   </div>
                                 </div>
                               </div>
+
                               <div class="card">
                                 <div class="card-header" role="tab" id="venue_details_premium_heading">
                                   <a data-toggle="collapse" data-parent="#accordion" href="#collapse_premium" aria-expanded="true" aria-controls="collapse_premium">
                                     <h5 class="mb-0">Premium Info</i></h5>
                                   </a>
                                 </div>
-                                <div id="collapse_premium" class="collapse show" role="tabpanel" aria-labelledby="collapse_premium_" data-parent="#accordion">
-                                  <div id="venue_detail_premium" class="card-body">
+                                <div id="collapse_premium" class="collapse show" role="tabpanel" aria-labelledby="collapse_premium" data-parent="#accordion">
+                                  <div class="card- p-0">
+                                    <ul class="list-group list-group-flush" id="venue_detail_premium">
                                   </div>
                                 </div>
                               </div>
+
+
                               <div class="card">
                                 <div class="card-header" role="tab" id="venue_details_rich_heading">
                                   <a data-toggle="collapse" data-parent="#accordion" href="#collapse_rich" aria-expanded="true" aria-controls="collapse_rich">
@@ -249,6 +253,7 @@
                                   </div>
                                 </div>
                               </div>
+
                             </div>
                           </div>
                         </div>
@@ -535,7 +540,7 @@
           }else{
             formatted_address = data.location.address + "(" + data.location.crossStreet + ")</br>" + data.location.postalCode + "</br>" + data.location.city + ", " + data.location.country;
           }
-          li_address.innerHTML = formatted_address;
+          li_address.innerHTML = "<small>" + formatted_address + "</small>";
           basic_list.append(li_address);
 
 
@@ -566,23 +571,25 @@
           }
           basic_list.append(li_categories);
 
-          var li_contact = document.createElement("li");
-          li_contact.classList.add("list-group-item");
-          var phone = "";
-          var twitter = "";
-          var facebook = "";
-          if ("formattedPhone" in data.contact){
-            phone = data.contact.formattedPhone;
+          if("formattedPhone" in data.contact || "url" in data){
+            var li_contact = document.createElement("li");
+            li_contact.classList.add("list-group-item");
+            var phone = "";
+            var url = "";
+
+            if ("formattedPhone" in data.contact){
+              phone = data.contact.formattedPhone;
+            }
+            if ("url" in data && "formattedPhone" in data.contact){
+              url = " - <a target='_blank' href='"+data.url+"'>"+data.url+"</a>";
+            }else if("url" in data && !("formattedPhone" in data.contact)){
+              url = "<a target='_blank' href='"+data.url+"'>"+data.url+"</a>";
+            }
+
+            var contactHtml = "<small>" + phone + url + "</small>";
+            li_contact.innerHTML = contactHtml;
+            basic_list.append(li_contact);
           }
-          if ("twitter" in data.contact){
-            twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
-          }
-          if ("facebook" in data.contact){
-            facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
-          }
-          var contactHtml = "<small>" + phone + " / " + twitter + " / " + facebook + "</small>";
-          li_contact.innerHTML = contactHtml.replace("/ /", "");
-          basic_list.append(li_contact);
 
           var bestphoto_url = pri_cat_img;
           var photo1_url = pri_cat_img;
@@ -614,6 +621,26 @@
               }
 
             }
+          }
+
+          if("hours" in data){
+
+          }
+
+          $("#venue_detail_premium").empty();
+          var premium_list = document.getElementById("venue_detail_premium");
+          var li_phototipcount = document.createElement("li");
+          li_phototipcount.classList.add("list-group-item");
+          li_phototipcount.innerHTML = "<small>This venue has <strong>" + data.photos.count + " photos </strong> & <strong>" + data.tips.count + "</strong> tips.</small>";
+          premium_list.append(li_phototipcount);
+
+          var twitter = "";
+          var facebook = "";
+          if ("twitter" in data.contact){
+            twitter = "<a href='https://twitter.com/" + data.contact.twitter + "'> Twitter </a>";
+          }
+          if ("facebook" in data.contact){
+            facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
           }
 
           $("#venue_photo_bestphoto").attr('src', bestphoto_url);
