@@ -30,8 +30,6 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.js'></script>
     <script type="text/javascript" src="https://rawgithub.com/yesmeck/jquery-jsonview/master/dist/jquery.jsonview.js"></script>
     <style>
-
-
       /* Start by setting display:none to make this hidden.
       Then we position it in relation to the viewport window
       with position:fixed. Width, height, top and left speak
@@ -61,6 +59,14 @@
       modal element will be visible */
       body.loading .loading_modal {
         display: block;
+      }
+
+      .carousel-control-prev-icon {
+        background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23000' viewBox='0 0 8 8'%3E%3Cpath d='M5.25 0l-4 4 4 4 1.5-1.5-2.5-2.5 2.5-2.5-1.5-1.5z'/%3E%3C/svg%3E");
+      }
+
+      .carousel-control-next-icon {
+          background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23000' viewBox='0 0 8 8'%3E%3Cpath d='M2.75 0l-1.5 1.5 2.5 2.5-2.5 2.5 1.5 1.5 4-4-4-4z'/%3E%3C/svg%3E");
       }
 
 
@@ -155,58 +161,83 @@
                 <div id="map" style='width:100%; height:350px'></div>
                 <!-- Venue Details Modal -->
                 <div class="modal fade" id="venue_detail_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                  <div class="modal-dialog modal-lg" role="document">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
                     <div class="modal-content">
                       <div class="modal-body">
                         <div class="row">
                           <div class="col-lg-5">
-                            <!--Carousel Wrapper-->
-                            <div id="venue_photo_carousel" class="carousel slide carousel-fade carousel-thumbnails"
-                              data-ride="carousel">
-                              <!--Slides-->
-                              <div class="carousel-inner" role="listbox">
-                                <div class="carousel-item active">
-                                  <img id="venue_photo_bestphoto" class="d-block w-100"
-                                    alt="First slide">
+                            <!--Photo Carousel Wrapper-->
+                            <div>
+                              <div id="venue_photo_carousel" class="carousel slide"
+                                data-ride="carousel">
+                                <!--Slides-->
+                                <div class="carousel-inner" role="listbox">
+                                  <div class="carousel-item active">
+                                    <img id="venue_photo_bestphoto" class="d-block w-100"
+                                      alt="First slide">
+                                  </div>
+                                  <div class="carousel-item">
+                                    <img class="d-block w-100"
+                                      id="venue_photo_photo1"
+                                      alt="Second slide">
+                                  </div>
+                                  <div class="carousel-item">
+                                    <img class="d-block w-100"
+                                      id="venue_photo_photo2"
+                                      alt="Third slide">
+                                  </div>
                                 </div>
-                                <div class="carousel-item">
-                                  <img class="d-block w-100"
-                                    id="venue_photo_photo1"
-                                    alt="Second slide">
-                                </div>
-                                <div class="carousel-item">
-                                  <img class="d-block w-100"
-                                    id="venue_photo_photo2"
-                                    alt="Third slide">
-                                </div>
+                                <!--/.Slides-->
+                                <!--Controls-->
+                                <a class="carousel-control-prev" href="#venue_photo_carousel" role="button" data-slide="prev">
+                                  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                  <span class="sr-only">Previous</span>
+                                </a>
+                                <a class="carousel-control-next" href="#venue_photo_carousel" role="button" data-slide="next">
+                                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                  <span class="sr-only">Next</span>
+                                </a>
+                                <!--/.Controls-->
+                                <ol class="carousel-indicators">
+                                  <li data-target="#venue_photo_carousel" data-slide-to="0" class="active">
+                                    <img id="venue_photo_bestphoto"
+                                     width="60">
+                                  </li>
+                                  <li data-target="#venue_photo_carousel" data-slide-to="1">
+                                    <img id="venue_photo_photo1"
+                                       width="60">
+                                  </li>
+                                  <li data-target="#venue_photo_carousel" data-slide-to="2">
+                                    <img id="venue_photo_photo2"
+                                       width="60">
+                                  </li>
+                                </ol>
                               </div>
-                              <!--/.Slides-->
-                              <!--Controls-->
-                              <a class="carousel-control-prev" href="#venue_photo_carousel" role="button" data-slide="prev">
-                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Previous</span>
-                              </a>
-                              <a class="carousel-control-next" href="#venue_photo_carousel" role="button" data-slide="next">
-                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Next</span>
-                              </a>
-                              <!--/.Controls-->
-                              <ol class="carousel-indicators">
-                                <li data-target="#venue_photo_carousel" data-slide-to="0" class="active">
-                                  <img id="venue_photo_bestphoto"
-                                   width="60">
-                                </li>
-                                <li data-target="#venue_photo_carousel}" data-slide-to="1">
-                                  <img id="venue_photo_photo1"
-                                     width="60">
-                                </li>
-                                <li data-target="#venue_photo_carousel" data-slide-to="2">
-                                  <img id="venue_photo_photo2"
-                                     width="60">
-                                </li>
-                              </ol>
                             </div>
-                            <!--/.Carousel Wrapper-->
+                            <!-- /. Photo Carousel Wrapper-->
+
+                            <!-- Tip Carousel Wrapper-->
+                            <div class="p-1">
+                              <div id="venue_tip_carousel" class="carousel slide"
+                                data-ride="carousel">
+                                <!--Slides-->
+                                <div class="carousel-inner" id="venue_tip_carousel_inner" role="listbox">
+
+                                </div>
+                                <!--/.Slides-->
+                                <!--Controls-->
+                                <a class="carousel-control-prev" href="#venue_tip_carousel" role="button" data-slide="prev">
+                                  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                  <span class="sr-only">Previous</span>
+                                </a>
+                                <a class="carousel-control-next" href="#venue_tip_carousel" role="button" data-slide="next">
+                                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                  <span class="sr-only">Next</span>
+                                </a>
+
+                              </div>
+                            </div>
+                            <!-- /. Tip Carousel Wrapper-->
                           </div>
                           <div class="col-lg-7">
                             <h5 id="venue_name"></h5>
@@ -235,7 +266,7 @@
                                   </a>
                                 </div>
                                 <div id="collapse_premium" class="collapse show" role="tabpanel" aria-labelledby="collapse_premium" data-parent="#accordion">
-                                  <div class="card- p-0">
+                                  <div class="card-body p-0">
                                     <ul class="list-group list-group-flush" id="venue_detail_premium">
                                   </div>
                                 </div>
@@ -249,7 +280,8 @@
                                   </a>
                                 </div>
                                 <div id="collapse_rich" class="collapse show" role="tabpanel" aria-labelledby="collapse_rich" data-parent="#accordion}">
-                                  <div id="venue_detail_rich" class="card-body">
+                                  <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush" id="venue_detail_rich">
                                   </div>
                                 </div>
                               </div>
@@ -509,7 +541,7 @@
         success: function(data){
           change_api_cookie("+","total_api_calls");
           change_api_cookie("+","details_api_calls");
-          document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span>"
+          document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span> <span class='badge badge-pill' id='venue_status'></span>"
 
           var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
           document.getElementById("venue_id").innerHTML="<a target='_blank' href='" + detail_api + "'>" + data.id + "</a>";
@@ -520,6 +552,17 @@
             document.getElementById("venue_rating").innerHTML="-"
           }
 
+          if("hours" in data){
+            var status = data.hours.richStatus.text;
+            document.getElementById("venue_status").innerHTML=data.hours.richStatus.text;
+            if(status.includes("Permanently Closed")){
+              document.getElementById("venue_status").classList.add("badge-danger");
+            }else if(status.includes("Closed until")){
+              document.getElementById("venue_status").classList.add("badge-warning");
+            }else{
+              document.getElementById("venue_status").classList.add("badge-success");
+            }
+          }
 
           $("#venue_detail_basic").empty();
           var basic_list = document.getElementById("venue_detail_basic");
@@ -623,10 +666,6 @@
             }
           }
 
-          if("hours" in data){
-
-          }
-
           $("#venue_detail_premium").empty();
           var premium_list = document.getElementById("venue_detail_premium");
           var li_phototipcount = document.createElement("li");
@@ -641,6 +680,73 @@
           }
           if ("facebook" in data.contact){
             facebook = "<a href='https://facebook.com/" + data.contact.facebook + "'> Facebook </a>";
+          }
+          var li_sns = document.createElement("li");
+          li_sns.classList.add("list-group-item");
+          li_sns.innerHTML = "<small>" + facebook + " / " + twitter + "</small>";
+          premium_list.append(li_sns);
+
+          $("#venue_detail_rich").empty();
+          var rich_list = document.getElementById("venue_detail_rich");
+
+          if("phrases" in data){
+            var phrases = data.phrases;
+            if(phrases.length > 0){
+              var li_tastes = document.createElement("li");
+              li_tastes.classList.add("list-group-item");
+              li_tastes_innerHTML = "<small>This place is known for its ";
+              for(var index = 0; index < phrases.length; index ++){
+                if (index == phrases.length-1){
+                  li_tastes_innerHTML = li_tastes_innerHTML + "<strong>" + phrases[index].phrase + "</strong>.";
+                }else if(index == phrases.length-2){
+                  li_tastes_innerHTML = li_tastes_innerHTML + "<strong>" + phrases[index].phrase + "</strong> and ";
+                }
+                else{
+                  li_tastes_innerHTML = li_tastes_innerHTML + "<strong>" + phrases[index].phrase + "</strong>, ";
+                }
+
+              }
+              li_tastes.innerHTML = li_tastes_innerHTML + "</small>"
+              rich_list.append(li_tastes);
+            }
+          }
+
+          if("attributes" in data){
+            var attributes = data.attributes.groups;
+            var li_attributes= document.createElement("li");
+            li_attributes.classList.add("list-group-item");
+            var li_attributes_list = document.createElement("ul");
+            li_attributes_list.classList.add("list-group");
+            for(var index = 0; index < attributes.length; index++){
+              var li_attributes_list_item = document.createElement("li");
+              li_attributes_list_item.classList.add("list-group-item");
+              li_attributes_list_item.innerHTML = "<small>" + attributes[index].items[0].displayName + ": "+ attributes[index].items[0].displayValue + "</small>";
+              li_attributes_list.append(li_attributes_list_item);
+            }
+            li_attributes.append(li_attributes_list);
+            rich_list.append(li_attributes);
+          }
+
+
+          $('#venue_tip_carousel_inner').empty();
+
+          if(data.tips.count > 0){
+            var tips = data.tips.groups[0].items;
+            for(var index=0; index < tips.length; index++){
+              var carousel_item = document.createElement("div");
+              if (index == 0){
+                carousel_item.classList.add("active");
+              }
+              carousel_item.classList.add("carousel-item");
+              var carousel_card = document.createElement("div");
+              carousel_card.classList.add("card","text-center","bg-light","border-light");
+              var carousel_card_body = document.createElement("div");
+              carousel_card_body.classList.add("card-body","mx-4");
+              carousel_card_body.innerHTML = "<small class='card-text'>"+ tips[index].text +"</small>";
+              carousel_card.append(carousel_card_body);
+              carousel_item.append(carousel_card);
+              $('#venue_tip_carousel_inner').append(carousel_item);
+            }
           }
 
           $("#venue_photo_bestphoto").attr('src', bestphoto_url);
