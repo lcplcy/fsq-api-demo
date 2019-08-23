@@ -6,9 +6,10 @@ import re
 import os
 import json
 
+# show venue counts for countries
+
 LATLNG_REGEX = re.compile("\-?(90|[0-8]?[0-9]\.[0-9]{0,6})\,\-?(180|(1[0-7][0-9]|[0-9]{0,2})\.[0-9]{0,6})")
 RESULT_LIMIT = 9
-#details
 
 @app.before_request
 def before_request():

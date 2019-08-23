@@ -140,8 +140,9 @@
         <div class="col-3">
           <div class="card text-right py-2 px-1">
             <pre data-toggle="tooltip" data-placement="left" data-html="true" title="Details: </br>Search: </br>Explore: </br>" id="api_calls_tracker"></pre>
+            <a data-toggle="modal" data-target="#calc" id="trigger_calc"><pre id="maus"></pre></a>
             <a type="button" class="btn btn-link" href="/">Reset Session</a>
-            <a type="button" class="btn btn-link" id="trigger_calc" data-toggle="modal" data-target="#calc">Estimate Usage</a>
+            <!--<a type="button" class="btn btn-link" id="trigger_calc" data-toggle="modal" data-target="#calc">Estimate Usage</a>-->
           </div>
         </div>
       </div>
@@ -352,7 +353,7 @@
       <div class="modal-dialog modal-dialog-scrollable modal-m" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Estimate API Usage</h5>
+            <h5 class="modal-title">Monthly Active Users</h5>
           </div>
           <div class="modal-body">
             <form>
@@ -362,7 +363,7 @@
             <p id="calc_answer"></p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="save_maus()">Save</button>
           </div>
         </div>
       </div>
@@ -373,6 +374,16 @@
 
     // Bias the autocomplete object to the user's geographical location,
     // as supplied by the browser's 'navigator.geolocation' object.
+    function save_maus(){
+      console.log(mau_input);
+      var mau_input = document.getElementById("num_users").value;
+      if(localStorage.getItem){
+        localStorage.setItem("maus",parseInt(mau_input));
+      }else{
+        setCookie("maus", parseInt(mau_input));
+      }
+      change_api_cookie("nochange","total_api_calls");
+    }
     function geolocate() {
      if ($("#useCurrLocation").is(':checked')){
        $("#manual_latlng").attr('disabled','disabled');
@@ -493,9 +504,13 @@
       }
       if(key=="total_api_calls"){
         if(localStorage.getItem){
-          document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + localStorage.getItem(key);
+          document.getElementById("api_calls_tracker").innerHTML = "Mthly Call Vol.: " +
+          prettyNumbers((parseInt(localStorage.getItem(key)) * 28 * parseInt(localStorage.getItem("maus"))));
+          document.getElementById("maus").innerHTML = "MAUs: " +
+          prettyNumbers(localStorage.getItem("maus"));
         }else{
-          document.getElementById("api_calls_tracker").innerHTML = "API Calls: " + readCookie(key);
+          document.getElementById("api_calls_tracker").innerHTML = "Monthly API Call Volume: " + prettyNumbers((parseInt(readCookie(key)) * 28 * parseInt(readCookie("maus"))));
+          document.getElementById("maus").innerHTML = "MAUs: " + prettyNumbers(readCookie("maus"));
         }
       }
     }
@@ -504,6 +519,8 @@
     });
     var supported_locales = ["","en","es","fr","de","it","ja","th","tr","ko","ru","pt","id","zh"]
     {% if no_results %}
+    change_api_cookie("reset","maus");
+    change_api_cookie("+","maus");
     change_api_cookie("reset","total_api_calls");
     change_api_cookie("reset","details_api_calls");
     change_api_cookie("reset","search_api_calls");
@@ -1020,14 +1037,6 @@
          content: "{% for i in split_string(split_string(api_get_url,'?')[1],'&') %}{{i}}<br/>{% endfor %}"
        });
 
-      document.getElementById("num_users").addEventListener('input',(event)=>{
-        var calc_answer = document.getElementById("calc_answer");
-        if(localStorage.getItem){
-          calc_answer.innerHTML = "Monthly API Call Volume: " + prettyNumbers(parseInt(localStorage.getItem('total_api_calls')) * 30 * event.target.value);
-        }else{
-          calc_answer.innerHTML = "Monthly API Call Volume: " + prettyNumbers(parseInt(readCookie('total_api_calls')) * 30 * event.target.value);
-        }
-      });
 
       document.getElementById("query_input").addEventListener('input',(event)=>{
         var query = document.getElementById("query_input").value;
@@ -1096,17 +1105,19 @@
     $('#api_calls_tracker').on('show.bs.tooltip', function () {
         var newTitle;
         if(localStorage.getItem){
-          newTitle = "Details: " + localStorage.details_api_calls +
+          newTitle = "<strong>Breakdown</strong>" +
+                     "</br>Details: " + localStorage.details_api_calls +
                      "</br>Search: " + localStorage.search_api_calls +
                      "</br>Explore: " + localStorage.explore_api_calls +
                      "</br>Suggest Completion: " + localStorage.suggestcomplete_api_calls +
-                     "</br>";
+                     "</br><u>Total: " + localStorage.total_api_calls + "</u>";
         }else{
-          newTitle = "Details: " + readCookie("details_api_calls") +
+          newTitle = "<strong>Breakdown</strong>" +
+                     "</br>Details: " + readCookie("details_api_calls") +
                      "</br>Search: " + readCookie("search_api_calls") +
                      "</br>Explore: " + readCookie("explore_api_calls") +
                      "</br>Suggest Completion: " + readCookie("suggestcomplete_api_calls") +
-                     "</br>";
+                     "</br><u>Total: " + readCookie("total_api_calls") + "</u>";
         }
 
         $('#api_calls_tracker').attr('title',newTitle).tooltip('_fixTitle');
