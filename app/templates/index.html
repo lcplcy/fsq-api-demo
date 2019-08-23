@@ -76,7 +76,7 @@
   <body>
 
     <!-- Trigger Search -->
-    <div class="container px-1 pt-2 pb-1 border-bottom shadow-sm">
+    <div class="container px-1 pt-2border-bottom shadow-sm">
       <div class="row">
         <div class="col-7">
           <form class="needs-validation" novalidate>
@@ -974,7 +974,26 @@
       api_result = document.createElement("li");
       api_result.classList.add("list-group-item","justify-content-between","align-items-center");
       api_result.id = "marker_trigger_{{ feature['properties']['venueid'] }}"
-      api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
+      {% if "rating" in feature["properties"] %}
+        {% if feature["properties"]["rating"] > 0 %}
+        api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a> <span class="badge badge-primary badge-pill">{{ feature["properties"]["rating"]}}</span>'
+        {% else %}
+        api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
+        {% endif %}
+      {% else %}
+        api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
+      {% endif %}
+      {% if "hours" in feature["properties"]["hours"] %}
+        {% if feature["properties"]["hours"] != "-"%}
+          {% if "Permanently Closed" in feature["properties"]["hours"] %}
+          api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-danger'>{{ feature['properties']['hours'] }}</span>"
+          {% elif "Closed until" in feature["properties"]["hours"] %}
+          api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-warning'>{{ feature['properties']['hours'] }}</span>"
+          {% else %}
+          api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-success'>{{ feature['properties']['hours'] }}</span>"
+          {% endif %}
+        {% endif %}
+      {% endif %}
       api_results_list.append(api_result);
 
       $("body").on("mouseover","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
@@ -1019,7 +1038,11 @@
         document.getElementById("locale_select").value="";
       }
       document.getElementById("locale_select").value=getUrlParameter("locale");
-      document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type");
+      if(getUrlParameter("section")){
+        document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type") + ", " + getUrlParameter("section");
+      }else{
+        document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type");
+      }
 
       $("body").on("click","#trigger_api",function(){
 

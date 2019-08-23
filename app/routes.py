@@ -38,6 +38,15 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
         feature['geometry']['coordinates'] = [row["location"]["lng"], row["location"]["lat"]]
         feature['properties']['venuename'] = row["name"]
         feature['properties']['venueid'] = row["id"]
+        if endpoint=="explore":
+            rating = 0
+            if "rating" in row:
+                rating = row["rating"]
+            feature['properties']['rating'] = rating
+            hours = "-"
+            if "hours" in row:
+                hours = row["hours"]["richStatus"]["text"]
+            feature["properties"]["hours"] = hours
 
         try:
             for index,i in enumerate(row["categories"]):
