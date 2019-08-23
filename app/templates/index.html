@@ -375,8 +375,12 @@
     // Bias the autocomplete object to the user's geographical location,
     // as supplied by the browser's 'navigator.geolocation' object.
     function save_maus(){
-      console.log(mau_input);
+
       var mau_input = document.getElementById("num_users").value;
+      console.log(mau_input);
+      if (!parseInt(mau_input, 10)){
+        mau_input = 1;
+      }
       if(localStorage.getItem){
         localStorage.setItem("maus",parseInt(mau_input));
       }else{
