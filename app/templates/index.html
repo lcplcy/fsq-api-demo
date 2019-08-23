@@ -1087,7 +1087,19 @@
               sc_dropdown.innerHTML = "";
               if(data.minivenues.length > 0){
                 for(var index = 0; index < data.minivenues.length; index ++){
-                  sc_dropdown.innerHTML = sc_dropdown.innerHTML + "<a class='dropdown-item' onclick=open_venue_details_modal('" + data.minivenues[index].id +"')>" + data.minivenues[index].name + "</a>"
+                  var primary_cat_icon_url = ""
+                  var minivenue = data.minivenues[index];
+                  /*
+                  if ("categories" in minivenue || minivenue.categories.length > 0){
+                    primary_cat_icon_url = minivenue.categories[0].icon.prefix + "44" + minivenue.categories[0].icon.suffix
+                    for(var mv_cat_index = 0; mv_cat_index < minivenue.categories.length; mv_cat_index++){
+                      if ("primary" in minivenue.categories[mv_cat_index]){
+                        primary_cat_icon_url = minivenue.categories[mv_cat_index].icon.prefix + "44" + minivenue.categories[mv_cat_index].icon.suffix;
+                      }
+                    }
+                  }
+                  */
+                  sc_dropdown.innerHTML = sc_dropdown.innerHTML + "<a class='dropdown-item' onclick=open_venue_details_modal('" + data.minivenues[index].id +"')>" + data.minivenues[index].name + "</a><img src='" + primary_cat_icon_url + "'>"
                 }
               }
             }

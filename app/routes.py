@@ -45,7 +45,8 @@ def fsq_result_to_geojson(fsq_result, endpoint="search"):
             feature['properties']['rating'] = rating
             hours = "-"
             if "hours" in row:
-                hours = row["hours"]["richStatus"]["text"]
+                if "richStatus" in row["hours"]:
+                    hours = row["hours"]["richStatus"]["text"]
             feature["properties"]["hours"] = hours
 
         try:
