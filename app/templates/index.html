@@ -983,7 +983,7 @@
       {% else %}
         api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
       {% endif %}
-      {% if "hours" in feature["properties"]["hours"] %}
+      {% if "hours" in feature["properties"] %}
         {% if feature["properties"]["hours"] != "-"%}
           {% if "Permanently Closed" in feature["properties"]["hours"] %}
           api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-danger'>{{ feature['properties']['hours'] }}</span>"
