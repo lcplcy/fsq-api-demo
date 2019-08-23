@@ -102,11 +102,9 @@
               <button value="search" class="nav-link btn btn-primary" onclick="venues_search();">Venues/Search</button>
             </li>
             <li class="nav-item py-2 px-1">
-              <button value="food" class="nav-link btn btn-success" onclick="venues_explore_section('food')">Food</button>
+
             </li>
-            <li class="nav-item py-2 px-1">
-              <button value="travel" class="nav-link btn btn-success" onclick="venues_explore_section('sights')">Travel</button>
-            </li>
+
             <li class="nav-item py-2 px-1">
               {% if no_results %}
               <button id="trigger_api" value="api_response" class="nav-link btn btn-outline-info" disabled>API Response</button>
@@ -119,8 +117,22 @@
         <div class="col-2">
           <form>
             <div class="form-group">
-              <label for="locale_select">Locale (Optional)</label>
+              <label for="locale_select"><small>Locale (Optional)</small></label>
               <select id="locale_select" class="form-control">
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="section_select"><small>Section (Venues/Explore Only)</small></label>
+              <select id="section_select" class="form-control">
+                <option value="na"> - </option>
+                <option value="topPicks">Top Picks</option>
+                <option value="food">Food</option>
+                <option value="drinks">Drinks</option>
+                <option value="coffee">Coffee</option>
+                <option value="shops">Shops</option>
+                <option value="arts">Arts</option>
+                <option value="outdoors">Outdoors</option>
+                <option value="trending">Trending</option>
               </select>
             </div>
         </form>
@@ -406,10 +418,15 @@
         }else{
           var curr_location = document.getElementById("manual_latlng").value;
           var locale = document.getElementById("locale_select").value;
-          if(locale.length > 0){
-            window.location.href = "?cl=" + curr_location + "&search_type=explore&locale=" + locale;
+          var section = document.getElementById("section_select").value;
+          if (section == "na"){
+            if(locale.length > 0){
+              window.location.href = "?cl=" + curr_location + "&search_type=explore&locale=" + locale;
+            }else{
+              window.location.href = "?cl=" + curr_location + "&search_type=explore";
+            }
           }else{
-            window.location.href = "?cl=" + curr_location + "&search_type=explore";
+            venues_explore_section(section);
           }
         }
       });
@@ -678,27 +695,28 @@
 
           if (data.photos.count > 0){
             var num_photos_api = data.photos.groups[1].items.length;
+            var photos = data.photos.groups[1].items;
             if ("bestPhoto" in data){
               bestphoto_url = data.bestPhoto.prefix + "300x300" + data.bestPhoto.suffix;
             }
             var random_photo_1, random_photo_2;
-            if(data.photos.groups[1].items.length >= 2){
+            if(num_photos_api >= 2){
               random_photo_1 = getRandomInt(num_photos_api-1);
-              photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+              photo1_url = photos[random_photo_1].prefix + "300x300" + photos[random_photo_1].suffix;
               while(photo1_url == bestphoto_url){
                 random_photo_1 = getRandomInt(num_photos_api-1);
-                photo1_url = data.photos.groups[1].items[random_photo_1].prefix + "300x300" + data.photos.groups[1].items[random_photo_1].suffix;
+                photo1_url = photos[random_photo_1].prefix + "300x300" + photos[random_photo_1].suffix;
               }
             }
-            if(data.photos.groups[1].items.length >= 3){
+            if(num_photos_api >= 3){
               random_photo_2 = getRandomInt(num_photos_api-1);
-              photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
-
-              while(random_photo_2 == random_photo_1 || photo2_url == bestphoto_url){
-                console.log(data.photos.groups[1].length-1);
+              photo2_url = photos[random_photo_2].prefix + "300x300" + photos[random_photo_2].suffix;
+              var count = 0;
+              while((random_photo_2 == random_photo_1 || photo2_url == bestphoto_url) && count < 10){
+                console.log(num_photos_api);
                 random_photo_2 = getRandomInt(num_photos_api-1);
-                photo2_url = data.photos.groups[1].items[random_photo_2].prefix + "300x300" + data.photos.groups[1].items[random_photo_2].suffix;
-
+                photo2_url = photos[random_photo_2].prefix + "300x300" + photos[random_photo_2].suffix;
+                count = count + 1;
               }
 
             }
@@ -767,8 +785,11 @@
 
 
           $('#venue_tip_carousel_inner').empty();
-
+          var venue_tip_carousel = document.getElementById("venue_tip_carousel");
           if(data.tips.count > 0){
+            venue_tip_carousel.classList.remove("invisible");
+            venue_tip_carousel.classList.add("visible");
+
             var tips = data.tips.groups[0].items;
             for(var index=0; index < tips.length; index++){
               var carousel_item = document.createElement("div");
@@ -785,6 +806,9 @@
               carousel_item.append(carousel_card);
               $('#venue_tip_carousel_inner').append(carousel_item);
             }
+          }else{
+            venue_tip_carousel.classList.add("invisible");
+            venue_tip_carousel.classList.remove("visible");
           }
 
           $("#venue_photo_bestphoto").attr('src', bestphoto_url);
@@ -1061,6 +1085,13 @@
       select_option.innerHTML = supported_locales[index];
       locale_select.append(select_option);
     }
+
+    $("#manual_latlng").keypress(
+      function(event){
+        if (event.which == '13') {
+          event.preventDefault();
+        }
+    });
 
     $('#api_calls_tracker').on('show.bs.tooltip', function () {
         var newTitle;
