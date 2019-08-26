@@ -106,11 +106,7 @@
             </li>
 
             <li class="nav-item py-2 px-1">
-              {% if no_results %}
-              <button id="trigger_api" value="api_response" class="nav-link btn btn-outline-info" disabled>API Response</button>
-              {% else %}
-              <button id="trigger_api" value="api_response" class="nav-link btn btn-info">API Response</button>
-              {% endif %}
+              <button id="trigger_api" value="api_response" class="nav-link btn btn-info disabled" >API Response</button>
             </li>
           </ul>
         </div>
@@ -141,7 +137,7 @@
           <div class="card text-right py-2 px-1">
             <pre data-toggle="tooltip" data-placement="left" data-html="true" title="Details: </br>Search: </br>Explore: </br>" id="api_calls_tracker"></pre>
             <a data-toggle="modal" data-target="#calc" id="trigger_calc"><pre id="maus"></pre></a>
-            <a type="button" class="btn btn-link" href="/">Reset Session</a>
+            <a type="button" class="btn btn-link" onclick="reset_session()">Reset Session</a>
             <!--<a type="button" class="btn btn-link" id="trigger_calc" data-toggle="modal" data-target="#calc">Estimate Usage</a>-->
           </div>
         </div>
@@ -150,11 +146,9 @@
 
     </div>
 
-    {% if no_results %}
 
-    {% else %}
     <!-- Search Result Display -->
-    <div class="main">
+    <div class="main invisible" id="search_result_display">
       <div class="container pt-1">
         <form>
           <div class="dropdown">
@@ -329,7 +323,7 @@
                   <h5 class="modal-title">URL</h5>
                 </div>
                 <div class="modal-body px-4 pt-4 pb-0" style="overflow-y:unset;">
-                  <a class="text-decoration-none" id="api_get_url" href="#" title="Breakdown" data-toggle="popover"><p  >{{ api_get_url }}</p></a>
+                  <a class="text-decoration-none"  id="api_get_url" href="#" title="Breakdown" data-toggle="popover"><p id="api_get_url_text"></p></a>
                 </div>
                 <div class="modal-header">
                   <h5>Response</h5>
@@ -348,7 +342,6 @@
         </div>
       </div>
   </div>
-    {% endif %}
     <div class="modal fade" id="calc" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-dialog-scrollable modal-m" role="document">
         <div class="modal-content">
@@ -371,9 +364,336 @@
     <div class="loading_modal"></div>
   </body>
   <script>
+    var supported_locales = ["","en","es","fr","de","it","ja","th","tr","ko","ru","pt","id","zh"]
 
-    // Bias the autocomplete object to the user's geographical location,
-    // as supplied by the browser's 'navigator.geolocation' object.
+    mapboxgl.accessToken = 'pk.eyJ1IjoibGhvY2hlbnlhbmciLCJhIjoiY2p1OTVkcHJhMGRyZTQ0cGU1NHhmdGd3dCJ9.FzGBsgjrz6pvXqlZTxROuw';
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/dark-v10',
+      center: [103.8013781,1.2740112],
+      zoom: 3
+    });
+
+    var result_venueids = []
+    var canvas = map.getCanvasContainer();
+    var fsq_result, result_geojson, api_get_url;
+    var prev_curr_location;
+    var map_center = {
+      "type": "FeatureCollection",
+      "features": [{
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [103.8013781,1.2740112]
+        }
+      }]
+    };
+    var point_layers = [];
+    var curr_search_type = "";
+    var curr_offset = 0;
+    function onUp(e) {
+      var coords = e.lngLat;
+      canvas.style.cursor = '';
+
+      // Unbind mouse/touch events
+      map.off('mousemove', onMove);
+      map.off('touchmove', onMove);
+      var locale = document.getElementById('locale_select').value;
+      var call_url;
+      curr_location = coords.lat + "," + coords.lng;
+      document.getElementById("manual_latlng").value = coords.lat + "," + coords.lng;
+
+      if (curr_location == prev_curr_location){
+        curr_offset = curr_offset + 9;
+      }else{
+        curr_offset = 0;
+      }
+
+      if (locale.length > 0){
+        call_url = "/search?cl="+ coords.lat + "," + coords.lng +"&locale="+locale+"&search_type=" + curr_search_type + "&offset=" + curr_offset;
+        call_search_api(call_url);
+      }else{
+        call_url = "/search?cl="+ coords.lat + "," + coords.lng +"&search_type=" + curr_search_type + "&offset=" + curr_offset;
+        call_search_api(call_url);
+      }
+
+    }
+    function onMove(e) {
+      var coords = e.lngLat;
+
+      // Set a UI indicator for dragging.
+      canvas.style.cursor = 'grabbing';
+
+      // Update the Point feature in `geojson` coordinates
+      // and call setData to the source layer `point` on it.
+      map_center.features[0].geometry.coordinates = [coords.lng, coords.lat];
+      map.getSource('map_center').setData(map_center);
+    }
+    function call_search_api(call_url){
+      $.ajax({
+        url:call_url,
+        type:'GET',
+        contentType:"application/json",
+        dataType:"json",
+        success: function(data){
+          fsq_result = data.fsq_result;
+          api_get_url = data.api_get_url;
+          document.getElementById("api_get_url_text").innerHTML = api_get_url;
+          prev_curr_location = getUrlParameter(api_get_url,"near");
+          document.getElementById("manual_latlng").value = prev_curr_location;
+          var api_response_popover_content = "";
+          var params = api_get_url.split("?")[1];
+          var split_params = params.split("&")
+          for(var split_params_i = 0; split_params_i < split_params.length; split_params_i++){
+            api_response_popover_content = api_response_popover_content + split_params[split_params_i] + "<br/>"
+          }
+          $('[data-toggle="popover"]').popover({
+            container: "body",
+            trigger: "hover",
+            placement: "top",
+            html: true,
+            content: api_response_popover_content
+          });
+
+          $("#api_response_text").JSONView(fsq_result);
+          document.getElementById("trigger_api").classList.remove("disabled");
+          var map_center_lat = parseFloat(data.map_center.split(",")[0]);
+          var map_center_long = parseFloat(data.map_center.split(",")[1]);
+          map_center = {
+            "type": "FeatureCollection",
+            "features": [{
+              "type": "Feature",
+              "geometry": {
+                "type": "Point",
+                "coordinates": [map_center_lat, map_center_long]
+              }
+            }]
+          };
+          result_geojson = data.result_geojson;
+          venues_array = result_geojson.features;
+
+
+          if(point_layers.length > 0){
+            for(var index = 0; index < point_layers.length; index ++){
+              map.removeLayer(point_layers[index]);
+            }
+          }
+          if(result_venueids.length > 0){
+            for(var index = 0; index < result_venueids.length; index ++){
+              map.removeImage('category_icon_' + result_venueids[index]);
+            }
+          }
+          if(map.getLayer('drag_point')){
+            map.removeLayer('drag_point');
+          }
+          if(map.hasImage('drag_point_img')){
+            map.removeImage('drag_point_img');
+          }
+          if(map.getSource('fsq_result')){
+              map.removeSource('fsq_result');
+          }
+          if(map.getSource('map_center')){
+              map.removeSource('map_center');
+          }
+
+          result_venueids = [];
+          point_layers=[];
+
+          for(var index = 0; index < venues_array.length; index ++){
+            result_venueids.push(venues_array[index].properties.venueid);
+            point_layers.push("point_" + venues_array[index].properties.venueid);
+          }
+
+          map.addSource('fsq_result', {
+            type:'geojson',
+            data: result_geojson
+          });
+          var api_results_list = document.getElementById('api-results-list');
+          $('#api-results-list').empty();
+
+          for(var result_geojson_i = 0; result_geojson_i < result_geojson.features.length; result_geojson_i++){
+
+            (function(venue){
+              map.loadImage(venue.properties.category_icon, function(error, image) {
+                if (error) throw error;
+                map.addImage('category_icon_' + venue.properties.venueid, image);
+                map.addLayer({
+                  "id": 'point_' + venue.properties.venueid,
+                  "type": "symbol",
+                  "source": "fsq_result",
+                  "filter": ["==","venueid", venue.properties.venueid],
+                  "layout":{
+                    "icon-image":'category_icon_'+venue.properties.venueid,
+                    "icon-size":0.5,
+                    "icon-allow-overlap": true,
+                  }
+                });
+              });
+            })(result_geojson.features[result_geojson_i]);
+            (function(venue){
+              map.on('click', 'point_' + venue.properties.venueid, function (e) {
+                var coordinates = e.features[0].geometry.coordinates.slice();
+                var venueid = e.features[0].properties.venueid;
+                open_venue_details_modal(venueid);
+              });
+            })(result_geojson.features[result_geojson_i]);
+            (function(venue){
+              map.on('mouseenter','point_' + venue.properties.venueid, function (e){
+              var list_item;
+
+              for(var index = 0; index < result_venueids.length; index ++){
+                list_item = document.getElementById("marker_trigger_" + result_venueids[index]);
+                if (result_venueids[index] != venue.properties.venueid){
+                  list_item.classList.remove("active");
+                }else{
+                  list_item.classList.add("active");
+                  list_item.scrollIntoView({block:"center"});
+
+                }
+              }
+
+              });
+            })(result_geojson.features[result_geojson_i]);
+            (function(venue){
+              map.on('mouseleave','point_' + venue.properties.venueid, function (e){
+                var list_item;
+
+                for(var index = 0; index < result_venueids.length; index ++){
+                  list_item = document.getElementById("marker_trigger_" + result_venueids[index]);
+                  list_item.classList.remove("active");
+                }
+
+              });
+            })(result_geojson.features[result_geojson_i]);
+            var api_result;
+            api_result = document.createElement("li");
+            api_result.classList.add("list-group-item","justify-content-between","align-items-center");
+            api_result.id = "marker_trigger_" + result_geojson.features[result_geojson_i].properties.venueid
+            if ("rating" in result_geojson.features[result_geojson_i].properties){
+              if(result_geojson.features[result_geojson_i].properties.rating > 0){
+                api_result.innerHTML ='<a id="modal_trigger_'+ result_geojson.features[result_geojson_i].properties.venueid +'" >'+ result_geojson.features[result_geojson_i].properties.venuename +'</a> <span class="badge badge-primary badge-pill">'+result_geojson.features[result_geojson_i].properties.rating+'</span>'
+              }else{
+                api_result.innerHTML ='<a id="modal_trigger_'+ result_geojson.features[result_geojson_i].properties.venueid +'" >'+ result_geojson.features[result_geojson_i].properties.venuename +'</a>'
+              }
+            }else{
+              api_result.innerHTML ='<a id="modal_trigger_'+ result_geojson.features[result_geojson_i].properties.venueid +'" >'+ result_geojson.features[result_geojson_i].properties.venuename +'</a>'
+            }
+            if ("hours" in result_geojson.features[result_geojson_i].properties){
+              if (result_geojson.features[result_geojson_i].properties.hours != "-"){
+                if (result_geojson.features[result_geojson_i].properties.hours.includes("Permanently Closed")){
+                  api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-danger'>" + result_geojson.features[result_geojson_i].properties.hours + "</span>"
+                }else if(result_geojson.features[result_geojson_i].properties.hours.includes("Closed until")){
+                  api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-warning'>"+result_geojson.features[result_geojson_i].properties.hours+"</span>"
+                }else{
+                  api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-success'>"+result_geojson.features[result_geojson_i].properties.hours+"</span>"
+                }
+              }
+            }
+            api_results_list.append(api_result);
+            (function(venue){
+              $("body").on("mouseover","#marker_trigger_" + venue.properties.venueid,function(){
+                  for(var i = 0; i < point_layers.length; i++){
+                    if (point_layers[i] != "point_" + venue.properties.venueid){
+                      map.setLayoutProperty(point_layers[i], 'visibility', 'none');
+                    }
+                    else{
+                      map.setLayoutProperty(point_layers[i], 'visibility', 'visible');
+                    }
+                  }
+                });
+
+
+              $("body").on("mouseout","#marker_trigger_" + venue.properties.venueid,function(){
+                for(var i = 0; i < point_layers.length; i++){
+
+                    map.setLayoutProperty(point_layers[i], 'visibility', 'visible');
+
+                }
+                    //map.setFilter('markers');
+                });
+              $("body").on("click","#modal_trigger_" + venue.properties.venueid,function(){
+                    open_venue_details_modal(venue.properties.venueid);
+                });
+            })(result_geojson.features[result_geojson_i]);
+
+
+          }
+          if (curr_search_type == "explore"){
+
+            api_result = document.createElement("li");
+            api_result.classList.add("list-group-item","justify-content-between","align-items-center","list-group-item-success");
+            api_result.innerHTML = "<a onclick='venues_explore()'>Next Page</a>";
+            api_results_list.append(api_result);
+          }
+          map.addSource('map_center',{
+            "type": "geojson",
+            "data": map_center
+          });
+
+          map.loadImage('https://www.google.com/intl/en_us/mapfiles/ms/micons/blue-dot.png', function(error, image){
+            if (error) throw error;
+            map.addImage('drag_point_img', image);
+            map.addLayer({
+              "id":"drag_point",
+              "type":"symbol",
+              "source":"map_center",
+              "layout":{
+                "icon-image":"drag_point_img",
+                "icon-allow-overlap": true,
+                "icon-size": 1,
+                "text-field": "Drag Me",
+                "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+
+                "text-size": 11,
+                "text-transform": "uppercase",
+                "text-letter-spacing": 0.05,
+                "text-offset": [0, 1.3],
+                "text-allow-overlap": true
+              },
+              "paint":{
+                  "text-color": "rgb(200,200,200)"
+              }
+            });
+          });
+
+          map.on('mouseenter','drag_point', function(){
+            canvas.style.cursor = 'move';
+          });
+          map.on('mouseleave', 'drag_point', function() {
+            canvas.style.cursor = '';
+          });
+          map.on('mousedown', 'drag_point', function(e) {
+            // Prevent the default map drag behavior.
+            e.preventDefault();
+            canvas.style.cursor = 'grab';
+
+            map.on('mousemove', onMove);
+            map.once('mouseup', onUp);
+            });
+          map.on('touchstart', 'drag_point', function(e) {
+            if (e.points.length !== 1) return;
+
+            // Prevent the default map drag behavior.
+            e.preventDefault();
+
+            map.on('touchmove', onMove);
+            map.once('touchend', onUp);
+            });
+
+          var bounds = new mapboxgl.LngLatBounds();
+          result_geojson.features.forEach(function(feature){
+            bounds.extend(feature.geometry.coordinates);
+          });
+          map.fitBounds(bounds,{padding:50, duration:0});
+
+
+          var result_div = document.getElementById("search_result_display");
+          result_div.classList.remove("invisible");
+          result_div.classList.add("visible");
+
+        }
+      })
+    }
     function save_maus(){
 
       var mau_input = document.getElementById("num_users").value;
@@ -387,6 +707,21 @@
         setCookie("maus", parseInt(mau_input));
       }
       change_api_cookie("nochange","total_api_calls");
+    }
+    function reset_session(){
+      change_api_cookie("reset","maus");
+      change_api_cookie("+","maus");
+      change_api_cookie("reset","total_api_calls");
+      change_api_cookie("reset","details_api_calls");
+      change_api_cookie("reset","search_api_calls");
+      change_api_cookie("reset","explore_api_calls");
+      change_api_cookie("reset","suggestcomplete_api_calls");
+
+      var result_div = document.getElementById("search_result_display");
+      result_div.classList.remove("visible");
+      result_div.classList.add("invisible");
+
+      document.getElementById("trigger_api").classList.add("disabled");
     }
     function geolocate() {
      if ($("#useCurrLocation").is(':checked')){
@@ -416,11 +751,18 @@
           }else{
             var curr_location = document.getElementById("manual_latlng").value;
             var locale = document.getElementById("locale_select").value;
+            var call_url;
+            change_api_cookie("+","total_api_calls");
+            change_api_cookie("+","search_api_calls");
+            curr_search_type = "search";
             if(locale.length > 0){
-              window.location.href = "?cl=" + curr_location + "&search_type=search&locale=" + locale;
+              call_url = "/search?cl="+curr_location+"&locale="+locale+"&search_type=search";
             }else{
-              window.location.href = "?cl=" + curr_location + "&search_type=search";
+              call_url = "/search?cl="+curr_location+"&search_type=search";
             }
+            document.getElementById("calls_from").innerText="Showing calls from: venues/search";
+
+            call_search_api(call_url);
           }
         });
       });
@@ -434,12 +776,25 @@
           var curr_location = document.getElementById("manual_latlng").value;
           var locale = document.getElementById("locale_select").value;
           var section = document.getElementById("section_select").value;
+          var call_url;
+          change_api_cookie("+","total_api_calls");
+          change_api_cookie("+","explore_api_calls");
+          if (curr_location == prev_curr_location){
+            curr_offset = curr_offset + 9;
+          }else{
+            curr_offset = 0;
+          }
+          curr_search_type = "explore";
           if (section == "na"){
+            document.getElementById("calls_from").innerText="Showing calls from: venues/explore";
+
             if(locale.length > 0){
-              window.location.href = "?cl=" + curr_location + "&search_type=explore&locale=" + locale;
+              call_url = "/search?cl=" + curr_location + "&search_type=explore&locale=" + locale + "&offset=" + curr_offset;
             }else{
-              window.location.href = "?cl=" + curr_location + "&search_type=explore";
+              call_url = "/search?cl=" + curr_location + "&search_type=explore" + "&offset=" + curr_offset;
             }
+
+            call_search_api(call_url);
           }else{
             venues_explore_section(section);
           }
@@ -454,12 +809,17 @@
         }else{
           var curr_location = document.getElementById("manual_latlng").value;
           var locale = document.getElementById("locale_select").value;
+
+          var call_url;
           if(locale.length > 0){
-            window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section + "&locale=" + locale;
+
+            call_url = "/search?cl=" + curr_location + "&search_type=explore&section=" + section + "&locale=" + locale + "&offset=" + curr_offset;
           }
           else{
-            window.location.href = "?cl=" + curr_location + "&search_type=explore&section=" + section;
+            call_url = "/search?cl=" + curr_location + "&search_type=explore&section=" + section + "&offset=" + curr_offset;
           }
+          document.getElementById("calls_from").innerText="Showing calls from: venues/explore, " + section + "&offset=" + curr_offset;
+          call_search_api(call_url);
         }
       });
     }
@@ -521,43 +881,9 @@
     $(function () {
       $('[data-toggle="tooltip"]').tooltip()
     });
-    var supported_locales = ["","en","es","fr","de","it","ja","th","tr","ko","ru","pt","id","zh"]
-    {% if no_results %}
-    change_api_cookie("reset","maus");
-    change_api_cookie("+","maus");
-    change_api_cookie("reset","total_api_calls");
-    change_api_cookie("reset","details_api_calls");
-    change_api_cookie("reset","search_api_calls");
-    change_api_cookie("reset","explore_api_calls");
-    change_api_cookie("reset","suggestcomplete_api_calls");
-    {% else %}
 
-
-    mapboxgl.accessToken = '{{ MAPBOX_ACCESS_KEY }}';
-    var map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/dark-v10',
-      center: [{{ map_center }}],
-      zoom: 3
-    });
-
-    var result_venueids = [{% for feature in result_geojson["features"] %}'{{ feature["properties"]["venueid"] }}',{% endfor %}]
-    var canvas = map.getCanvasContainer();
-    var result_geojson = {{ result_geojson|safe }};
-    var fsq_result = {{ fsq_result|tojson|safe }};
-    var map_center = {
-      "type": "FeatureCollection",
-      "features": [{
-        "type": "Feature",
-        "geometry": {
-          "type": "Point",
-          "coordinates": [{{ map_center }}]
-        }
-      }]
-    };
-    var point_layers = [{% for feature in result_geojson["features"] %}"point_{{ feature['properties']['venueid'] }}",{% endfor %}];
-    var getUrlParameter = function getUrlParameter(sParam) {
-      var sPageURL = window.location.search.substring(1),
+    var getUrlParameter = function getUrlParameter(url,sParam) {
+      var sPageURL = url,
           sURLVariables = sPageURL.split('&'),
           sParameterName,
           i;
@@ -570,38 +896,12 @@
           }
       }
     };
-    function onUp(e) {
-      var coords = e.lngLat;
-      canvas.style.cursor = '';
 
-      // Unbind mouse/touch events
-      map.off('mousemove', onMove);
-      map.off('touchmove', onMove);
-      var search_type=getUrlParameter('search_type');
-      var locale = document.getElementById('locale_select').value;
-      if (locale.length > 0){
-        window.location.href = "?cl=" + coords.lat + "," + coords.lng + "&search_type=" + search_type + "&locale=" + locale;
-      }else{
-        window.location.href = "?cl=" + coords.lat + "," + coords.lng + "&search_type=" + search_type;
-      }
-
-    }
-    function onMove(e) {
-      var coords = e.lngLat;
-
-      // Set a UI indicator for dragging.
-      canvas.style.cursor = 'grabbing';
-
-      // Update the Point feature in `geojson` coordinates
-      // and call setData to the source layer `point` on it.
-      map_center.features[0].geometry.coordinates = [coords.lng, coords.lat];
-      map.getSource('map_center').setData(map_center);
-    }
     function getRandomInt(max) {
       return Math.floor(Math.random() * Math.floor(max));
     }
     function open_venue_details_modal(venueid){
-      var call_url = "https://fsq-api.herokuapp.com/details?venueid="+venueid;
+      var call_url = "/details?venueid="+venueid;
       var locale = document.getElementById("locale_select").value;
       if (locale.length > 0){
         call_url = call_url + "&locale=" + locale;
@@ -616,7 +916,7 @@
           change_api_cookie("+","details_api_calls");
           document.getElementById("venue_name").innerHTML=data.name + " <span class='badge badge-primary badge-pill' id='venue_rating'></span> <span class='badge badge-pill' id='venue_status'></span>"
           var locale = document.getElementById("locale_select").value;
-          var detail_api = "https://fsq-api.herokuapp.com/details?venueid=" + data.id;
+          var detail_api = "/details?venueid=" + data.id;
           if(locale.length > 0){
             detail_api = detail_api + "&locale=" + locale;
           }
@@ -652,7 +952,6 @@
               if (address_i < data.location.formattedAddress.length-1){
                 formatted_address = formatted_address + data.location.formattedAddress[address_i] + "</br>";
               }else{
-                console.log(data.location.formattedAddress[address_i]);
                 formatted_address = formatted_address + data.location.formattedAddress[address_i];
               }
             }
@@ -724,9 +1023,11 @@
             if(num_photos_api >= 2){
               random_photo_1 = getRandomInt(num_photos_api-1);
               photo1_url = photos[random_photo_1].prefix + "300x300" + photos[random_photo_1].suffix;
-              while(photo1_url == bestphoto_url){
+              var count = 10;
+              while(photo1_url == bestphoto_url && count < 10){
                 random_photo_1 = getRandomInt(num_photos_api-1);
                 photo1_url = photos[random_photo_1].prefix + "300x300" + photos[random_photo_1].suffix;
+                count = count + 1;
               }
             }
             if(num_photos_api >= 3){
@@ -742,7 +1043,7 @@
 
             }
           }
-
+          console.log("photos and basic info ok");
           $("#venue_detail_premium").empty();
           var premium_list = document.getElementById("venue_detail_premium");
           var li_phototipcount = document.createElement("li");
@@ -850,199 +1151,9 @@
 
     }
 
-    change_api_cookie("+","total_api_calls");
-
-    if(getUrlParameter("search_type") == "search"){
-      change_api_cookie("+","search_api_calls");
-    }else if(getUrlParameter("search_type") == "explore"){
-      change_api_cookie("+","explore_api_calls");
-    }
-    map.on('load', function(){
-      map.addSource('fsq_result', {
-        type:'geojson',
-        data: result_geojson
-      });
-
-      {% for feature in result_geojson["features"] %}
-      map.loadImage('{{ feature["properties"]["category_icon"] }}', function(error, image) {
-        if (error) throw error;
-        map.addImage('category_icon_{{feature["properties"]["venueid"]}}', image);
-        map.addLayer({
-          "id": 'point_{{feature["properties"]["venueid"]}}',
-          "type": "symbol",
-          "source": "fsq_result",
-          "filter": ["==","venueid", '{{feature["properties"]["venueid"]}}'],
-          "layout":{
-            "icon-image":'category_icon_{{feature["properties"]["venueid"]}}',
-            "icon-size":0.5,
-            "icon-allow-overlap": true,
-          }
-        });
-      });
-
-      map.on('click', 'point_{{feature["properties"]["venueid"]}}', function (e) {
-        var coordinates = e.features[0].geometry.coordinates.slice();
-        var venueid = e.features[0].properties.venueid;
-        open_venue_details_modal(venueid);
-      });
-
-      map.on('mouseenter','point_{{feature["properties"]["venueid"]}}', function (e){
-        var list_item;
-
-        for(var index = 0; index < result_venueids.length; index ++){
-          list_item = document.getElementById("marker_trigger_" + result_venueids[index]);
-          if (result_venueids[index] != "{{ feature['properties']['venueid'] }}"){
-            list_item.classList.remove("active");
-          }else{
-            list_item.classList.add("active");
-          }
-        }
-
-      });
-      map.on('mouseleave','point_{{feature["properties"]["venueid"]}}', function (e){
-        var list_item;
-
-        for(var index = 0; index < result_venueids.length; index ++){
-          list_item = document.getElementById("marker_trigger_" + result_venueids[index]);
-          list_item.classList.remove("active");
-        }
-
-      });
-      {% endfor %}
-
-      map.addSource('map_center',{
-        "type": "geojson",
-        "data": map_center
-      });
-
-      map.loadImage('https://www.google.com/intl/en_us/mapfiles/ms/micons/blue-dot.png', function(error, image){
-        if (error) throw error;
-        map.addImage('drag_point_img', image);
-        map.addLayer({
-          "id":"drag_point",
-          "type":"symbol",
-          "source":"map_center",
-          "layout":{
-            "icon-image":"drag_point_img",
-            "icon-allow-overlap": true,
-            "icon-size": 1,
-            "text-field": "Drag Me",
-            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-
-            "text-size": 11,
-            "text-transform": "uppercase",
-            "text-letter-spacing": 0.05,
-            "text-offset": [0, 1.3],
-            "text-allow-overlap": true
-          },
-          "paint":{
-              "text-color": "rgb(200,200,200)"
-          }
-        });
-      });
-
-      map.flyTo({center: [{{ map_center }}], zoom: map.getZoom() - 0.5});
-
-      map.on('mouseenter','drag_point', function(){
-        canvas.style.cursor = 'move';
-      });
-      map.on('mouseleave', 'drag_point', function() {
-        canvas.style.cursor = '';
-      });
-      map.on('mousedown', 'drag_point', function(e) {
-        // Prevent the default map drag behavior.
-        e.preventDefault();
-        canvas.style.cursor = 'grab';
-
-        map.on('mousemove', onMove);
-        map.once('mouseup', onUp);
-        });
-      map.on('touchstart', 'drag_point', function(e) {
-        if (e.points.length !== 1) return;
-
-        // Prevent the default map drag behavior.
-        e.preventDefault();
-
-        map.on('touchmove', onMove);
-        map.once('touchend', onUp);
-        });
-
-      var api_results_list = document.getElementById('api-results-list');
-      var api_result;
-      {% for feature in result_geojson["features"] %}
-
-      api_result = document.createElement("li");
-      api_result.classList.add("list-group-item","justify-content-between","align-items-center");
-      api_result.id = "marker_trigger_{{ feature['properties']['venueid'] }}"
-      {% if "rating" in feature["properties"] %}
-        {% if feature["properties"]["rating"] > 0 %}
-        api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a> <span class="badge badge-primary badge-pill">{{ feature["properties"]["rating"]}}</span>'
-        {% else %}
-        api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
-        {% endif %}
-      {% else %}
-        api_result.innerHTML ='<a id="modal_trigger_{{ feature["properties"]["venueid"] }}">{{ feature["properties"]["venuename"] }}</a>'
-      {% endif %}
-      {% if "hours" in feature["properties"] %}
-        {% if feature["properties"]["hours"] != "-"%}
-          {% if "Permanently Closed" in feature["properties"]["hours"] %}
-          api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-danger'>{{ feature['properties']['hours'] }}</span>"
-          {% elif "Closed until" in feature["properties"]["hours"] %}
-          api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-warning'>{{ feature['properties']['hours'] }}</span>"
-          {% else %}
-          api_result.innerHTML = api_result.innerHTML + " <span class='badge badge-pill badge-success'>{{ feature['properties']['hours'] }}</span>"
-          {% endif %}
-        {% endif %}
-      {% endif %}
-      api_results_list.append(api_result);
-
-      $("body").on("mouseover","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
-          for(var i = 0; i < point_layers.length; i++){
-            if (point_layers[i] != "point_{{ feature['properties']['venueid'] }}"){
-              map.setLayoutProperty(point_layers[i], 'visibility', 'none');
-            }
-            else{
-              map.setLayoutProperty(point_layers[i], 'visibility', 'visible');
-            }
-          }
-            //map.setFilter('markers',["==",['string',['get','venueid']],"{{ feature['properties']['venueid'] }}"]);
-        });
-      $("body").on("mouseout","#marker_trigger_{{ feature['properties']['venueid'] }}",function(){
-        for(var i = 0; i < point_layers.length; i++){
-
-            map.setLayoutProperty(point_layers[i], 'visibility', 'visible');
-
-        }
-            //map.setFilter('markers');
-        });
-      $("body").on("click","#modal_trigger_{{ feature['properties']['venueid'] }}",function(){
-            open_venue_details_modal("{{ feature['properties']['venueid'] }}");
-        });
-
-      {% endfor %}
-    });
-
-    var bounds = new mapboxgl.LngLatBounds();
-    result_geojson.features.forEach(function(feature){
-      bounds.extend(feature.geometry.coordinates);
-    });
-
-    map.fitBounds(bounds);
 
     $(document).ready(function(){
-
-      document.getElementById("manual_latlng").value=getUrlParameter("cl");
-      if(getUrlParameter("locale")){
-        document.getElementById("locale_select").value=getUrlParameter("locale");
-      }else{
-        document.getElementById("locale_select").value="";
-      }
-      document.getElementById("locale_select").value=getUrlParameter("locale");
-      if(getUrlParameter("section")){
-        document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type") + ", " + getUrlParameter("section");
-      }else{
-        document.getElementById("calls_from").innerText="Showing calls from: venues/" + getUrlParameter("search_type");
-      }
+      reset_session();
 
       $("body").on("click","#trigger_api",function(){
 
@@ -1054,15 +1165,10 @@
            //remove the padding right and modal-open class from the body tag which bootstrap adds when a modal is shown
            $('body').removeClass("modal-open")
            $('body').css("padding-right","");
+
        });
 
-       $('[data-toggle="popover"]').popover({
-         container: "body",
-         trigger: "hover",
-         placement: "top",
-         html: true,
-         content: "{% for i in split_string(split_string(api_get_url,'?')[1],'&') %}{{i}}<br/>{% endfor %}"
-       });
+
 
 
       document.getElementById("query_input").addEventListener('input',(event)=>{
@@ -1070,7 +1176,7 @@
         if(query.length >= 3){
           var curr_location = document.getElementById("manual_latlng").value;
           var locale = document.getElementById("locale_select").value;
-          var call_url = "https://fsq-api.herokuapp.com/suggestcomplete?cl="+ curr_location + "&query=" + query;
+          var call_url = "/suggestcomplete?cl="+ curr_location + "&query=" + query;
           if (locale.length > 0){
             call_url = call_url + "&locale=" + locale;
           }
@@ -1113,13 +1219,10 @@
     });
 
 
-    $("#api_response_text").JSONView(fsq_result);
-
     $('#toggle-details').on('click', function() {
       $('#api_response_text').JSONView('toggle', 2);
     });
 
-    {% endif %}
     $body = $("body");
 
     $(document).on({
