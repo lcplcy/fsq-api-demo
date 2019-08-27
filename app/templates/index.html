@@ -806,7 +806,7 @@
           else{
             call_url = "/search?cl=" + curr_location + "&search_type=explore&section=" + section + "&offset=" + curr_offset;
           }
-          document.getElementById("calls_from").innerText="Showing calls from: venues/explore, " + section + "&offset=" + curr_offset;
+          document.getElementById("calls_from").innerText="Showing calls from: venues/explore, " + section + ", offset=" + curr_offset;
           call_search_api(call_url);
         }
       });
