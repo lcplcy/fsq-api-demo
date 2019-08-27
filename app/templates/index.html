@@ -316,6 +316,7 @@
           </div>
 
           <!-- API Response Modal -->
+
           <div class="modal fade" id="api_response" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
               <div class="modal-content">
@@ -323,7 +324,7 @@
                   <h5 class="modal-title">URL</h5>
                 </div>
                 <div class="modal-body px-4 pt-4 pb-0" style="overflow-y:unset;">
-                  <a class="text-decoration-none"  id="api_get_url" href="#" title="Breakdown" data-toggle="popover"><p id="api_get_url_text"></p></a>
+                  <p data-toggle="tooltip" data-placement="right" data-html="true" id="api_get_url_text"><a class="text-decoration-none" id="api_get_url"></a></p>
                 </div>
                 <div class="modal-header">
                   <h5>Response</h5>
@@ -438,22 +439,9 @@
         success: function(data){
           fsq_result = data.fsq_result;
           api_get_url = data.api_get_url;
-          document.getElementById("api_get_url_text").innerHTML = api_get_url;
           prev_curr_location = getUrlParameter(api_get_url,"near");
           document.getElementById("manual_latlng").value = prev_curr_location;
-          var api_response_popover_content = "";
-          var params = api_get_url.split("?")[1];
-          var split_params = params.split("&")
-          for(var split_params_i = 0; split_params_i < split_params.length; split_params_i++){
-            api_response_popover_content = api_response_popover_content + split_params[split_params_i] + "<br/>"
-          }
-          $('[data-toggle="popover"]').popover({
-            container: "body",
-            trigger: "hover",
-            placement: "top",
-            html: true,
-            content: api_response_popover_content
-          });
+          document.getElementById("api_get_url").innerHTML = api_get_url;
 
           $("#api_response_text").JSONView(fsq_result);
           document.getElementById("trigger_api").classList.remove("disabled");
@@ -1155,7 +1143,18 @@
     $(document).ready(function(){
       reset_session();
 
+
       $("body").on("click","#trigger_api",function(){
+
+            var api_response_popover_content = "";
+            var params = api_get_url.split("?")[1];
+            var split_params = params.split("&")
+            for(var split_params_i = 0; split_params_i < split_params.length; split_params_i++){
+              api_response_popover_content = api_response_popover_content + split_params[split_params_i] + "<br>"
+            }
+
+            $('#api_get_url_text').attr('title',api_response_popover_content).tooltip('_fixTitle');
+
 
            $("#api_response").modal("show");
 
@@ -1264,6 +1263,8 @@
 
         $('#api_calls_tracker').attr('title',newTitle).tooltip('_fixTitle');
     })
+
+
   </script>
 
 </html>
