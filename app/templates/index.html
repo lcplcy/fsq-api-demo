@@ -378,7 +378,7 @@
     var result_venueids = []
     var canvas = map.getCanvasContainer();
     var fsq_result, result_geojson, api_get_url;
-    var prev_curr_location;
+    var prev_curr_location, prev_section;
     var map_center = {
       "type": "FeatureCollection",
       "features": [{
@@ -412,9 +412,19 @@
 
       if (locale.length > 0){
         call_url = "/search?cl="+ coords.lat + "," + coords.lng +"&locale="+locale+"&search_type=" + curr_search_type + "&offset=" + curr_offset;
+        if (curr_search_type == "search"){
+          document.getElementById("calls_from").innerText="Showing calls from: venues/search";
+        }else {
+          document.getElementById("calls_from").innerText="Showing calls from: venues/explore, offset=" + curr_offset ;
+        }
         call_search_api(call_url);
       }else{
         call_url = "/search?cl="+ coords.lat + "," + coords.lng +"&search_type=" + curr_search_type + "&offset=" + curr_offset;
+        if (curr_search_type == "search"){
+          document.getElementById("calls_from").innerText="Showing calls from: venues/search";
+        }else {
+          document.getElementById("calls_from").innerText="Showing calls from: venues/explore, offset=" + curr_offset ;
+        }
         call_search_api(call_url);
       }
 
@@ -440,6 +450,11 @@
           fsq_result = data.fsq_result;
           api_get_url = data.api_get_url;
           prev_curr_location = getUrlParameter(api_get_url,"near");
+          if(getUrlParameter(api_get_url, "section")){
+            prev_section = getUrlParameter(api_get_url, "section");
+          }else{
+            prev_section = "na";
+          }
           document.getElementById("manual_latlng").value = prev_curr_location;
           document.getElementById("api_get_url").innerHTML = api_get_url;
 
@@ -768,13 +783,17 @@
           change_api_cookie("+","total_api_calls");
           change_api_cookie("+","explore_api_calls");
           if (curr_location == prev_curr_location){
-            curr_offset = curr_offset + 9;
+            if(section == prev_section){
+              curr_offset = curr_offset + 9;
+            }else{
+              curr_offset = 0;
+            }
           }else{
             curr_offset = 0;
           }
           curr_search_type = "explore";
           if (section == "na"){
-            document.getElementById("calls_from").innerText="Showing calls from: venues/explore";
+            document.getElementById("calls_from").innerText="Showing calls from: venues/explore, offset=" + curr_offset ;
 
             if(locale.length > 0){
               call_url = "/search?cl=" + curr_location + "&search_type=explore&locale=" + locale + "&offset=" + curr_offset;
