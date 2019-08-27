@@ -347,11 +347,11 @@
       <div class="modal-dialog modal-dialog-scrollable modal-m" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Monthly Active Users</h5>
+            <h5 class="modal-title">Monthly Unique Views</h5>
           </div>
           <div class="modal-body">
             <form>
-              <label for="num_users" class="col-form-label">Number of Users:</label>
+              <label for="num_users" class="col-form-label">Number of Unique Views in a Month:</label>
               <input type="text" class="form-control" id="num_users">
             </form>
             <p id="calc_answer"></p>
@@ -877,11 +877,11 @@
         if(localStorage.getItem){
           document.getElementById("api_calls_tracker").innerHTML = "Mthly Call Vol.: " +
           prettyNumbers((parseInt(localStorage.getItem(key)) * 28 * parseInt(localStorage.getItem("maus"))));
-          document.getElementById("maus").innerHTML = "MAUs: " +
+          document.getElementById("maus").innerHTML = "Mthly Unique Views: " +
           prettyNumbers(localStorage.getItem("maus"));
         }else{
-          document.getElementById("api_calls_tracker").innerHTML = "Monthly API Call Volume: " + prettyNumbers((parseInt(readCookie(key)) * 28 * parseInt(readCookie("maus"))));
-          document.getElementById("maus").innerHTML = "MAUs: " + prettyNumbers(readCookie("maus"));
+          document.getElementById("api_calls_tracker").innerHTML = "Mthly API Call Volume: " + prettyNumbers((parseInt(readCookie(key)) * 28 * parseInt(readCookie("maus"))));
+          document.getElementById("maus").innerHTML = "Mthly Unique Views: " + prettyNumbers(readCookie("maus"));
         }
       }
     }
