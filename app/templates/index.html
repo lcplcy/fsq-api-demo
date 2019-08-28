@@ -1050,7 +1050,6 @@
 
             }
           }
-          console.log("photos and basic info ok");
           $("#venue_detail_premium").empty();
           var premium_list = document.getElementById("venue_detail_premium");
           var li_phototipcount = document.createElement("li");
@@ -1070,6 +1069,14 @@
           li_sns.classList.add("list-group-item");
           li_sns.innerHTML = "<small>" + facebook + " / " + twitter + "</small>";
           premium_list.append(li_sns);
+
+          if ("parent" in data){
+            var li_parent = document.createElement("li");
+            li_parent.classList.add("list-group-item");
+            li_parent.innerHTML = "<small> This venue is inside <a href='#' onclick=\"open_venue_details_modal('" + data.parent.id + "')\">" + data.parent.name + "</a>.</small>";
+            premium_list.append(li_parent);
+          }
+
 
           $("#venue_detail_rich").empty();
           var rich_list = document.getElementById("venue_detail_rich");
