@@ -876,11 +876,11 @@
       if(key=="total_api_calls"){
         if(localStorage.getItem){
           document.getElementById("api_calls_tracker").innerHTML = "Mthly Call Vol.: " +
-          prettyNumbers((parseInt(localStorage.getItem(key)) * 28 * parseInt(localStorage.getItem("maus"))));
+          prettyNumbers((parseInt(localStorage.getItem(key)) * parseInt(localStorage.getItem("maus"))));
           document.getElementById("maus").innerHTML = "Mthly Unique Views: " +
           prettyNumbers(localStorage.getItem("maus"));
         }else{
-          document.getElementById("api_calls_tracker").innerHTML = "Mthly API Call Volume: " + prettyNumbers((parseInt(readCookie(key)) * 28 * parseInt(readCookie("maus"))));
+          document.getElementById("api_calls_tracker").innerHTML = "Mthly API Call Volume: " + prettyNumbers((parseInt(readCookie(key)) * parseInt(readCookie("maus"))));
           document.getElementById("maus").innerHTML = "Mthly Unique Views: " + prettyNumbers(readCookie("maus"));
         }
       }
